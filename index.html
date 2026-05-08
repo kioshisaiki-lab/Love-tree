@@ -1897,6 +1897,8 @@
 
   <!-- TREE -->
   <section class="tree-section glass" aria-label="Love tree illustration" id="tree-section-el">
+    <!-- Butterfly canvas inside tree so it scrolls naturally -->
+    <canvas id="bf-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;border-radius:42px;"></canvas>
     <!-- Night sky overlay — visible only at night / dusk / dawn -->
     <div class="sky-overlay" id="sky-overlay" aria-hidden="true">
       <div class="sky-overlay-gradient"></div>
@@ -4109,5 +4111,262 @@ pulseBtn.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') ope
   <button class="upd-btn" onclick="applyUpdate()">Update now</button>
   <button class="upd-close" onclick="dismissUpdate()">✕</button>
 </div>
+
+<!-- ── VISUAL EFFECTS ── -->
+<canvas id="fx-canvas" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9998;"></canvas>
+<div id="glitter-layer" style="position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;"></div>
+
+<script>
+(function(){
+  // ── PETAL CANVAS (fixed, full screen) ──
+  const petalCanvas = document.getElementById('fx-canvas');
+  const pctx = petalCanvas.getContext('2d');
+
+  // ── BUTTERFLY CANVAS (inside tree, scrolls naturally) ──
+  const bfCanvas = document.getElementById('bf-canvas');
+  const bctx = bfCanvas.getContext('2d');
+
+  let W, H, dpr, BW, BH, bdpr;
+
+  function resizePetal(){
+    dpr = Math.min(devicePixelRatio||1,2);
+    W = window.innerWidth; H = window.innerHeight;
+    petalCanvas.width = W*dpr; petalCanvas.height = H*dpr;
+    pctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function resizeBf(){
+    bdpr = Math.min(devicePixelRatio||1,2);
+    BW = bfCanvas.offsetWidth; BH = bfCanvas.offsetHeight;
+    bfCanvas.width = BW*bdpr; bfCanvas.height = BH*bdpr;
+    bctx.setTransform(bdpr,0,0,bdpr,0,0);
+  }
+
+  window.addEventListener('resize', ()=>{ resizePetal(); resizeBf(); });
+  resizePetal();
+  setTimeout(resizeBf, 800);
+
+  /* ── CHERRY BLOSSOMS (petal canvas, fixed coords) ── */
+  function getTreeViewRect(){
+    const el = document.getElementById('tree-section-el');
+    return el ? el.getBoundingClientRect() : {left:0,top:0,width:300,height:300};
+  }
+
+  const PETAL_COLORS = ['#fda4af','#f9a8d4','#fbcfe8','#f472b6','#fce7f3','#fecdd3'];
+  const PETAL_COUNT = window.innerWidth < 600 ? 20 : 35;
+
+  function randPetal(fromTop){
+    const r = getTreeViewRect();
+    return {
+      x: r.left + Math.random()*r.width,
+      y: fromTop ? r.top - 10 - Math.random()*40 : r.top + Math.random()*r.height,
+      r: 4 + Math.random()*5,
+      color: PETAL_COLORS[Math.floor(Math.random()*PETAL_COLORS.length)],
+      speedY: 0.6 + Math.random()*1.0,
+      speedX: (Math.random()-0.5)*0.6,
+      rot: Math.random()*Math.PI*2,
+      rotSpeed: (Math.random()-0.5)*0.04,
+      sway: Math.random()*Math.PI*2,
+      swaySpeed: 0.008 + Math.random()*0.012,
+      opacity: 0.55 + Math.random()*0.45,
+    };
+  }
+  const petals = Array.from({length:PETAL_COUNT}, ()=>randPetal(false));
+
+  function drawPetal(ctx, p){
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.globalAlpha = p.opacity;
+    ctx.beginPath();
+    ctx.ellipse(0,0,p.r,p.r*0.55,0,0,Math.PI*2);
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 4;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ── BUTTERFLIES (bf canvas, local coords 0..BW, 0..BH) ── */
+  const BUTTERFLY_COUNT = window.innerWidth < 600 ? 7 : 12;
+  const BF_COLORS = [
+    ['#f9a8d4','#c084fc'], ['#fda4af','#f472b6'],
+    ['#c084fc','#818cf8'], ['#fbcfe8','#f9a8d4'],
+    ['#a5f3fc','#c084fc'],
+  ];
+
+  function randBf(){
+    const col = BF_COLORS[Math.floor(Math.random()*BF_COLORS.length)];
+    const bw = bfCanvas.offsetWidth || 300;
+    const bh = bfCanvas.offsetHeight || 300;
+    return {
+      x: bw*(0.3 + Math.random()*0.4),
+      y: bh*(0.2 + Math.random()*0.5),
+      targetX: bw*Math.random(),
+      targetY: bh*Math.random(),
+      speed: 0.18 + Math.random()*0.22,
+      wingPhase: Math.random()*Math.PI*2,
+      wingSpeed: 0.03 + Math.random()*0.025,
+      size: 3 + Math.random()*3,
+      col,
+      waitTime: Math.random()*80,
+    };
+  }
+  const butterflies = Array.from({length:BUTTERFLY_COUNT}, randBf);
+
+  function drawButterfly(ctx, b){
+    const wingOpen = Math.abs(Math.sin(b.wingPhase));
+    const bodyLen = b.size * 1.2;
+    const wW = b.size * 1.4 * wingOpen;
+    const wH = b.size * 0.9;
+    const wW2 = b.size * 0.9 * wingOpen;
+    const wH2 = b.size * 0.6;
+
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(Math.sin(b.wingPhase * 0.3) * 0.18);
+    ctx.globalAlpha = 0.88;
+
+    // Upper left wing
+    ctx.beginPath();
+    ctx.moveTo(0,-bodyLen*0.2);
+    ctx.bezierCurveTo(-wW*0.3,-wH*1.1,-wW*1.1,-wH*0.7,-wW,wH*0.15);
+    ctx.bezierCurveTo(-wW*0.6,wH*0.4,-wW*0.1,wH*0.1,0,-bodyLen*0.2);
+    const gUL = ctx.createRadialGradient(-wW*0.4,-wH*0.3,0,-wW*0.4,-wH*0.3,wW*0.9);
+    gUL.addColorStop(0,b.col[0]+'ee'); gUL.addColorStop(0.5,b.col[1]+'bb'); gUL.addColorStop(1,b.col[0]+'44');
+    ctx.fillStyle=gUL; ctx.fill();
+
+    // Upper right wing
+    ctx.beginPath();
+    ctx.moveTo(0,-bodyLen*0.2);
+    ctx.bezierCurveTo(wW*0.3,-wH*1.1,wW*1.1,-wH*0.7,wW,wH*0.15);
+    ctx.bezierCurveTo(wW*0.6,wH*0.4,wW*0.1,wH*0.1,0,-bodyLen*0.2);
+    const gUR = ctx.createRadialGradient(wW*0.4,-wH*0.3,0,wW*0.4,-wH*0.3,wW*0.9);
+    gUR.addColorStop(0,b.col[0]+'ee'); gUR.addColorStop(0.5,b.col[1]+'bb'); gUR.addColorStop(1,b.col[0]+'44');
+    ctx.fillStyle=gUR; ctx.fill();
+
+    // Lower left wing
+    ctx.beginPath();
+    ctx.moveTo(0,bodyLen*0.1);
+    ctx.bezierCurveTo(-wW2*0.8,bodyLen*0.05,-wW2*1.1,wH2*1.2,-wW2*0.4,wH2*1.5);
+    ctx.bezierCurveTo(-wW2*0.1,wH2*1.6,0,wH2*0.8,0,bodyLen*0.1);
+    const gLL = ctx.createRadialGradient(-wW2*0.4,wH2*0.8,0,-wW2*0.4,wH2*0.8,wW2);
+    gLL.addColorStop(0,b.col[1]+'cc'); gLL.addColorStop(1,b.col[0]+'33');
+    ctx.fillStyle=gLL; ctx.fill();
+
+    // Lower right wing
+    ctx.beginPath();
+    ctx.moveTo(0,bodyLen*0.1);
+    ctx.bezierCurveTo(wW2*0.8,bodyLen*0.05,wW2*1.1,wH2*1.2,wW2*0.4,wH2*1.5);
+    ctx.bezierCurveTo(wW2*0.1,wH2*1.6,0,wH2*0.8,0,bodyLen*0.1);
+    const gLR = ctx.createRadialGradient(wW2*0.4,wH2*0.8,0,wW2*0.4,wH2*0.8,wW2);
+    gLR.addColorStop(0,b.col[1]+'cc'); gLR.addColorStop(1,b.col[0]+'33');
+    ctx.fillStyle=gLR; ctx.fill();
+
+    // Body
+    ctx.beginPath();
+    ctx.ellipse(0,bodyLen*0.05,2.2,bodyLen*0.55,0,0,Math.PI*2);
+    ctx.fillStyle='#881337'; ctx.shadowBlur=0; ctx.fill();
+
+    // Head
+    ctx.beginPath(); ctx.arc(0,-bodyLen*0.52,2,0,Math.PI*2);
+    ctx.fillStyle='#3b0a1a'; ctx.fill();
+
+    // Antennae
+    ctx.strokeStyle='#3b0a1a'; ctx.lineWidth=0.7;
+    ctx.beginPath(); ctx.moveTo(0,-bodyLen*0.52);
+    ctx.quadraticCurveTo(-b.size*0.4,-bodyLen*0.9,-b.size*0.5,-bodyLen*1.05); ctx.stroke();
+    ctx.beginPath(); ctx.arc(-b.size*0.5,-bodyLen*1.07,1,0,Math.PI*2);
+    ctx.fillStyle='#3b0a1a'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0,-bodyLen*0.52);
+    ctx.quadraticCurveTo(b.size*0.4,-bodyLen*0.9,b.size*0.5,-bodyLen*1.05); ctx.stroke();
+    ctx.beginPath(); ctx.arc(b.size*0.5,-bodyLen*1.07,1,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  /* ── MAIN LOOP ── */
+  let butterfliesReady = false;
+  setTimeout(()=>{ butterfliesReady=true; resizeBf(); }, 3200);
+
+  function loop(){
+    requestAnimationFrame(loop);
+
+    // Petals on fixed canvas
+    pctx.clearRect(0,0,W,H);
+    const r = getTreeViewRect();
+    const tBottom = r.top + r.height;
+    for(const p of petals){
+      p.sway += p.swaySpeed;
+      p.x += p.speedX + Math.sin(p.sway)*0.5;
+      p.y += p.speedY;
+      p.rot += p.rotSpeed;
+      if(p.y > tBottom+20) Object.assign(p, randPetal(true));
+      drawPetal(pctx, p);
+    }
+
+    // Butterflies on local canvas inside tree
+    if(!butterfliesReady) return;
+    const bw = bfCanvas.offsetWidth || 300;
+    const bh = bfCanvas.offsetHeight || 300;
+    const pad = 20;
+    bctx.clearRect(0,0,bw,bh);
+
+    for(const b of butterflies){
+      if(b.waitTime>0){ b.waitTime--; }
+      const dx=b.targetX-b.x, dy=b.targetY-b.y;
+      const dist=Math.hypot(dx,dy);
+      if(dist<8){
+        b.targetX=pad+Math.random()*(bw-pad*2);
+        b.targetY=pad+Math.random()*(bh-pad*2);
+        b.waitTime=40+Math.random()*80;
+      } else {
+        b.x+=(dx/dist)*b.speed;
+        b.y+=(dy/dist)*b.speed;
+      }
+      b.x=Math.max(pad,Math.min(bw-pad,b.x));
+      b.y=Math.max(pad,Math.min(bh-pad,b.y));
+      b.wingPhase+=b.wingSpeed;
+      drawButterfly(bctx, b);
+    }
+  }
+  requestAnimationFrame(loop);
+
+  /* ── GLITTER / SPARKLE ON TAP ── */
+  const glitterLayer = document.getElementById('glitter-layer');
+  const GLITTER_COLORS = ['#f472b6','#a855f7','#fda4af','#c084fc','#fb7185','#fbbf24','#fff','#f9a8d4'];
+
+  function spawnGlitter(x, y){
+    const count = 18;
+    for(let i=0;i<count;i++){
+      const el = document.createElement('div');
+      const angle = (Math.PI*2/count)*i + (Math.random()-0.5)*0.5;
+      const dist = 30 + Math.random()*55;
+      const size = 4 + Math.random()*6;
+      const color = GLITTER_COLORS[Math.floor(Math.random()*GLITTER_COLORS.length)];
+      const dur = 500 + Math.random()*400;
+      const tx = Math.cos(angle)*dist;
+      const ty = Math.sin(angle)*dist;
+      el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:${size}px;height:${size}px;border-radius:50%;background:${color};box-shadow:0 0 ${size*2}px ${color};pointer-events:none;transform:translate(-50%,-50%);animation:glitter-fly ${dur}ms ease-out forwards;--tx:${tx}px;--ty:${ty}px;`;
+      glitterLayer.appendChild(el);
+      setTimeout(()=>el.remove(), dur+50);
+    }
+  }
+
+  if(!document.getElementById('glitter-style')){
+    const s = document.createElement('style');
+    s.id = 'glitter-style';
+    s.textContent = `@keyframes glitter-fly{0%{transform:translate(-50%,-50%) scale(1);opacity:1;}100%{transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(0);opacity:0;}}`;
+    document.head.appendChild(s);
+  }
+
+  document.addEventListener('click', e => spawnGlitter(e.clientX, e.clientY));
+  document.addEventListener('touchstart', e => {
+    for(const t of e.touches) spawnGlitter(t.clientX, t.clientY);
+  }, {passive:true});
+
+})();
+</script>
 </body>
 </html>
