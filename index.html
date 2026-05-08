@@ -5,8 +5,20 @@
 <script>
   // ── AUTO-UPDATE FROM GITHUB ──────────────────────────────────────────
   const GITHUB_URL = "https://raw.githubusercontent.com/kioshisaiki-lab/Love-tree/main/index.html";
-  const VERSION_KEY = "app_html_version";
-  const LAST_CHECK_KEY = "last_version_check";
+  const STORE_KEY   = "lovetree_version";
+  const CHECK_KEY   = "lovetree_lastcheck";
+  const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+  // ── Storage helpers that work on local files (content://) ────────────
+  // localStorage throws or silently fails on some Android WebViews when
+  // the file is opened via content://. We fall back to sessionStorage,
+  // then to an in-memory object so the page never hard-crashes.
+  const _mem = {};
+  const store = {
+    get(k)    { try { return localStorage.getItem(k); }    catch(e){} try { return sessionStorage.getItem(k); } catch(e){} return _mem[k]||null; },
+    set(k,v)  { try { localStorage.setItem(k,v); return; } catch(e){} try { sessionStorage.setItem(k,v); return; } catch(e){} _mem[k]=v; },
+    del(k)    { try { localStorage.removeItem(k); }         catch(e){} try { sessionStorage.removeItem(k); }      catch(e){} delete _mem[k]; },
+  };
 
   let pendingHTML = null;
 
@@ -15,43 +27,81 @@
     if (banner) banner.classList.add("visible");
   }
 
-  function checkForUpdate() {
-    const now = Date.now();
-    const lastCheck = parseInt(localStorage.getItem(LAST_CHECK_KEY) || "0");
-    if (now - lastCheck < 5 * 60 * 1000) return;
-    localStorage.setItem(LAST_CHECK_KEY, now);
-
-    fetch(GITHUB_URL + "?nocache=" + now)
-      .then(r => r.text())
-      .then(html => {
-        const stored = localStorage.getItem(VERSION_KEY);
-        // Use a simple hash: compare length + first 500 chars
-        const fingerprint = html.length + "|" + html.slice(0, 500);
-        if (stored && stored !== fingerprint) {
-          pendingHTML = html;
-          showUpdateBanner();
-        } else {
-          // First run — just store fingerprint, no banner
-          localStorage.setItem(VERSION_KEY, fingerprint);
-        }
-      })
-      .catch(() => {});
+  function hideUpdateBanner() {
+    const banner = document.getElementById("update-banner");
+    if (banner) banner.classList.remove("visible");
   }
 
+  function fingerprint(html) {
+    // A cheap but reliable fingerprint: length + hash of first 1000 chars
+    let h = 0;
+    const s = html.slice(0, 1000);
+    for (let i = 0; i < s.length; i++) { h = (Math.imul(31, h) + s.charCodeAt(i)) | 0; }
+    return html.length + "|" + (h >>> 0);
+  }
+
+  function checkForUpdate() {
+    const now = Date.now();
+    const lastCheck = parseInt(store.get(CHECK_KEY) || "0");
+    if (now - lastCheck < CHECK_INTERVAL) return;
+    store.set(CHECK_KEY, now);
+
+    fetch(GITHUB_URL + "?nocache=" + now)
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(html => {
+        const fp      = fingerprint(html);
+        const stored  = store.get(STORE_KEY);
+
+        if (!stored) {
+          // First run — record current fingerprint, no banner
+          store.set(STORE_KEY, fp);
+          return;
+        }
+
+        if (stored !== fp) {
+          // GitHub file has actually changed — show update banner
+          pendingHTML = html;
+          showUpdateBanner();
+        }
+        // If fingerprints match: file is unchanged, stay silent
+      })
+      .catch(() => {
+        // Network error or CORS — silently ignore, try again next interval
+        store.del(CHECK_KEY); // allow retry sooner
+      });
+  }
+
+  // "Update now" — download the new file so the user can replace it
   window.applyUpdate = function() {
-    if (pendingHTML) {
-      // Save new fingerprint before rewriting
-      const fingerprint = pendingHTML.length + "|" + pendingHTML.slice(0, 500);
-      localStorage.setItem(VERSION_KEY, fingerprint);
-      document.open();
-      document.write(pendingHTML);
-      document.close();
+    const html = pendingHTML;
+    if (!html) return;
+
+    try {
+      // Save new fingerprint so banner won't reappear for this version
+      store.set(STORE_KEY, fingerprint(html));
+
+      // Trigger a download of the new index.html
+      const blob = new Blob([html], { type: "text/html" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = "index.html";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+
+      hideUpdateBanner();
+      pendingHTML = null;
+    } catch(e) {
+      // Fallback: open GitHub URL in a new tab
+      window.open(GITHUB_URL, "_blank");
+      hideUpdateBanner();
     }
   };
 
   window.dismissUpdate = function() {
-    const banner = document.getElementById("update-banner");
-    if (banner) banner.classList.remove("visible");
+    hideUpdateBanner();
+    // Don't clear pendingHTML — banner can come back on next check
   };
 
   window.addEventListener("load", checkForUpdate);
@@ -4107,8 +4157,8 @@ pulseBtn.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') ope
   }
 </style>
 <div id="update-banner">
-  <span class="upd-text">✨ A new update is ready!</span>
-  <button class="upd-btn" onclick="applyUpdate()">Update now</button>
+  <span class="upd-text">✨ New version available!</span>
+  <button class="upd-btn" onclick="applyUpdate()">Download & replace</button>
   <button class="upd-close" onclick="dismissUpdate()">✕</button>
 </div>
 
