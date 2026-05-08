@@ -2317,7 +2317,68 @@
   <!-- CREDIT -->
   <footer class="credit">created by : kyoshiiirk</footer>
 
+  <!-- ── SETTINGS SECTION ───────────────────────────── -->
+  <section style="max-width:480px;width:100%;margin:32px auto 0;padding:0 16px 48px;">
+    <div class="glass" style="border-radius:28px;padding:24px 20px;">
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+        <span style="font-size:1.4rem;">⚙️</span>
+        <span style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--burgundy);">Settings</span>
+      </div>
+
+      <!-- Auto-update row -->
+      <div style="background:rgba(255,255,255,0.55);border-radius:18px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
+        <span style="font-size:1.5rem;" id="upd-status-icon">🔄</span>
+        <div style="flex:1;">
+          <div style="font-family:'Jost',sans-serif;font-weight:600;font-size:0.95rem;color:var(--burgundy);">Auto Update</div>
+          <div id="upd-status-text" style="font-family:'Jost',sans-serif;font-size:0.78rem;color:#be185d;margin-top:2px;">Checking…</div>
+        </div>
+        <button id="upd-check-btn" onclick="window.__checkUpdateNow && window.__checkUpdateNow()" style="
+          background:linear-gradient(135deg,var(--pink),var(--purple));
+          color:#fff;border:none;border-radius:14px;
+          padding:7px 14px;font-size:0.75rem;font-weight:600;
+          cursor:pointer;font-family:'Jost',sans-serif;">Check now</button>
+      </div>
+
+    </div>
+  </section>
+
 </main>
+
+<script>
+window.__checkUpdateNow = function() {
+  const icon = document.getElementById('upd-status-icon');
+  const text = document.getElementById('upd-status-text');
+  if (!navigator.onLine) {
+    icon.textContent = '📵';
+    text.textContent = 'No internet connection';
+    return;
+  }
+  icon.textContent = '🔄';
+  text.textContent = 'Checking for updates…';
+  const GITHUB_PAGES = 'https://kioshisaiki-lab.github.io/Love-tree';
+  const HTML_URL = GITHUB_PAGES + '/index.html';
+  const CURRENT_SIZE = document.documentElement.outerHTML.length;
+  fetch(HTML_URL + '?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
+    .then(r => {
+      if (!r.ok) throw new Error();
+      const remoteSize = parseInt(r.headers.get('content-length') || '0', 10);
+      if (remoteSize > 0 && remoteSize !== CURRENT_SIZE) {
+        icon.textContent = '✨';
+        text.textContent = 'Update available! Tap "Update now" below.';
+      } else {
+        icon.textContent = '✅';
+        text.textContent = "You're on the latest version!";
+      }
+    })
+    .catch(() => {
+      icon.textContent = '⚠️';
+      text.textContent = 'Could not reach server. Try again.';
+    });
+};
+setTimeout(function(){ window.__checkUpdateNow && window.__checkUpdateNow(); }, 3500);
+</script>
 
 <script>
 /* ===== CONFIG ===== */
