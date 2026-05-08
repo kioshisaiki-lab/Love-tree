@@ -2317,34 +2317,59 @@
   <!-- CREDIT -->
   <footer class="credit">created by : kyoshiiirk</footer>
 
-  <!-- ── SETTINGS SECTION ───────────────────────────── -->
-  <section style="max-width:480px;width:100%;margin:32px auto 0;padding:0 16px 48px;">
-    <div class="glass" style="border-radius:28px;padding:24px 20px;">
-
-      <!-- Header -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-        <span style="font-size:1.4rem;">⚙️</span>
-        <span style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--burgundy);">Settings</span>
-      </div>
-
-      <!-- Auto-update row -->
-      <div style="background:rgba(255,255,255,0.55);border-radius:18px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
-        <span style="font-size:1.5rem;" id="upd-status-icon">🔄</span>
-        <div style="flex:1;">
-          <div style="font-family:'Jost',sans-serif;font-weight:600;font-size:0.95rem;color:var(--burgundy);">Auto Update</div>
-          <div id="upd-status-text" style="font-family:'Jost',sans-serif;font-size:0.78rem;color:#be185d;margin-top:2px;">Checking…</div>
-        </div>
-        <button id="upd-check-btn" onclick="window.__checkUpdateNow && window.__checkUpdateNow()" style="
-          background:linear-gradient(135deg,var(--pink),var(--purple));
-          color:#fff;border:none;border-radius:14px;
-          padding:7px 14px;font-size:0.75rem;font-weight:600;
-          cursor:pointer;font-family:'Jost',sans-serif;">Check now</button>
-      </div>
-
-    </div>
-  </section>
+  <!-- ── SETTINGS FOOTER SPACER ─────────────────────── -->
+  <div style="height:32px;"></div>
 
 </main>
+
+<!-- ── FLOATING SETTINGS BUTTON ───────────────────────── -->
+<button onclick="document.getElementById('settings-modal').style.display='flex'" style="
+  position:absolute;top:18px;right:18px;z-index:9000;
+  width:34px;height:34px;border-radius:50%;border:none;
+  background:rgba(255,255,255,0.75);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  box-shadow:0 2px 12px rgba(168,85,247,0.18);
+  font-size:1.05rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;">⚙️</button>
+
+<!-- ── SETTINGS MODAL ──────────────────────────────────── -->
+<div id="settings-modal" style="
+  display:none;position:fixed;inset:0;z-index:9999;
+  align-items:center;justify-content:center;
+  background:rgba(30,10,20,0.35);backdrop-filter:blur(6px);">
+  <div style="
+    background:rgba(255,255,255,0.95);border-radius:28px;
+    padding:28px 22px;width:88%;max-width:360px;
+    box-shadow:0 8px 32px rgba(168,85,247,0.18);
+    position:relative;">
+
+    <!-- Close -->
+    <button onclick="document.getElementById('settings-modal').style.display='none'" style="
+      position:absolute;top:14px;right:16px;
+      background:none;border:none;font-size:1.3rem;cursor:pointer;color:#aaa;">✕</button>
+
+    <!-- Title -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;">
+      <span style="font-size:1.4rem;">⚙️</span>
+      <span style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--burgundy);">Settings</span>
+    </div>
+
+    <!-- Auto-update row -->
+    <div style="background:rgba(253,244,255,0.8);border-radius:18px;padding:16px 16px;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:1.5rem;" id="upd-status-icon">🔄</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Jost',sans-serif;font-weight:600;font-size:0.92rem;color:var(--burgundy);">Auto Update</div>
+        <div id="upd-status-text" style="font-family:'Jost',sans-serif;font-size:0.75rem;color:#be185d;margin-top:3px;">Checking…</div>
+      </div>
+      <button onclick="window.__checkUpdateNow && window.__checkUpdateNow()" style="
+        background:linear-gradient(135deg,var(--pink),var(--purple));
+        color:#fff;border:none;border-radius:14px;
+        padding:7px 13px;font-size:0.73rem;font-weight:600;
+        cursor:pointer;font-family:'Jost',sans-serif;white-space:nowrap;">Check now</button>
+    </div>
+
+  </div>
+</div>
 
 <script>
 window.__checkUpdateNow = function() {
@@ -2359,17 +2384,23 @@ window.__checkUpdateNow = function() {
   text.textContent = 'Checking for updates…';
   const GITHUB_PAGES = 'https://kioshisaiki-lab.github.io/Love-tree';
   const HTML_URL = GITHUB_PAGES + '/index.html';
-  const CURRENT_SIZE = document.documentElement.outerHTML.length;
-  fetch(HTML_URL + '?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
-    .then(r => {
-      if (!r.ok) throw new Error();
-      const remoteSize = parseInt(r.headers.get('content-length') || '0', 10);
-      if (remoteSize > 0 && remoteSize !== CURRENT_SIZE) {
+
+  fetch(HTML_URL + '?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => { if (!r.ok) throw new Error(); return r.text(); })
+    .then(remoteHTML => {
+      // Compare actual content with what's running
+      const currentHTML = document.documentElement.outerHTML;
+      // Strip dynamic parts (timer digits) before comparing
+      const clean = s => s.replace(/\d{2,}/g, '#');
+      if (clean(remoteHTML) !== clean(currentHTML)) {
         icon.textContent = '✨';
         text.textContent = 'Update available! Tap "Update now" below.';
+        // Store remote HTML for instant update
+        window.__pendingHTML = remoteHTML;
       } else {
         icon.textContent = '✅';
         text.textContent = "You're on the latest version!";
+        window.__pendingHTML = null;
       }
     })
     .catch(() => {
