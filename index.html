@@ -4,6 +4,111 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Our Love Tree</title>
+
+<!-- =====================================================
+     AUTO-UPDATE SYSTEM
+     How it works:
+       1. On load, fetches index.html from GitHub Pages via HEAD request
+       2. Compares file size with the current file size
+       3. If different → shows a soft update banner
+       4. User taps "Update" → fetches new index.html and reloads into it
+
+     To release a new version:
+       1. Edit your index.html (add features, fix bugs, anything)
+       2. Push it to GitHub — that's it! No version.json needed. ✅
+     ===================================================== -->
+<script>
+(function () {
+  /* ── CONFIG ──────────────────────────────────────────── */
+  const CURRENT_SIZE  = document.currentScript
+                        ? document.currentScript.ownerDocument.documentElement.outerHTML.length
+                        : null;
+  const GITHUB_PAGES  = 'https://kioshisaiki-lab.github.io/Love-tree'; // no trailing slash
+  const HTML_URL      = GITHUB_PAGES + '/index.html';
+  const CHECK_DELAY   = 3000;   // ms after page load before first check
+  const CACHE_KEY     = 'lovetree_last_update_check';
+  const CACHE_TTL     = 60 * 60 * 1000; // recheck at most once per hour
+
+  /* ── BANNER ──────────────────────────────────────────── */
+  function showBanner(onUpdate) {
+    const banner = document.createElement('div');
+    banner.id = 'update-banner';
+    banner.innerHTML = `
+      <span style="flex:1">✨ A new update is ready!</span>
+      <button id="upd-btn" style="
+        background:#a855f7;color:#fff;border:none;border-radius:20px;
+        padding:8px 20px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        Update now
+      </button>
+      <button id="upd-later" style="
+        background:transparent;border:none;color:#888;font-size:20px;
+        cursor:pointer;padding:0 4px;line-height:1;">✕</button>
+    `;
+    Object.assign(banner.style, {
+      position:'fixed', bottom:'0', left:'0', right:'0',
+      display:'flex', alignItems:'center', gap:'12px',
+      padding:'14px 20px',
+      background:'rgba(255,255,255,0.92)',
+      backdropFilter:'blur(12px)',
+      borderTop:'1px solid rgba(168,85,247,0.25)',
+      boxShadow:'0 -4px 20px rgba(168,85,247,0.15)',
+      fontFamily:'system-ui,sans-serif', fontSize:'14px', color:'#333',
+      zIndex:'99999',
+      animation:'slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1)'
+    });
+
+    if (!document.getElementById('upd-style')) {
+      const s = document.createElement('style');
+      s.id = 'upd-style';
+      s.textContent = '@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}';
+      document.head.appendChild(s);
+    }
+
+    document.body.appendChild(banner);
+    document.getElementById('upd-btn').onclick   = onUpdate;
+    document.getElementById('upd-later').onclick = () => banner.remove();
+  }
+
+  /* ── UPDATE ──────────────────────────────────────────── */
+  function doUpdate() {
+    const banner = document.getElementById('update-banner');
+    if (banner) {
+      banner.innerHTML = '<span style="flex:1;text-align:center">⏳ Downloading update…</span>';
+    }
+    fetch(HTML_URL + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(r => { if (!r.ok) throw new Error(); return r.text(); })
+      .then(html => {
+        const blob = new Blob([html], { type: 'text/html' });
+        window.location.href = URL.createObjectURL(blob);
+      })
+      .catch(() => { window.location.href = GITHUB_PAGES + '/'; });
+  }
+
+  /* ── CHECK ───────────────────────────────────────────── */
+  function checkForUpdate() {
+    if (!navigator.onLine) return;
+
+    try {
+      const last = parseInt(localStorage.getItem(CACHE_KEY) || '0', 10);
+      if (Date.now() - last < CACHE_TTL) return;
+      localStorage.setItem(CACHE_KEY, String(Date.now()));
+    } catch (_) {}
+
+    // Use HEAD request — downloads only headers, not the full file
+    fetch(HTML_URL + '?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
+      .then(r => {
+        if (!r.ok) return;
+        const remoteSize = parseInt(r.headers.get('content-length') || '0', 10);
+        if (remoteSize > 0 && CURRENT_SIZE && remoteSize !== CURRENT_SIZE) {
+          showBanner(doUpdate);
+        }
+      })
+      .catch(() => {});
+  }
+
+  setTimeout(checkForUpdate, CHECK_DELAY);
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Jost:wght@400;500&family=Dancing+Script:wght@600&display=swap" rel="stylesheet" />
