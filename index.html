@@ -5,72 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Our Love Tree</title>
 
-<!-- =====================================================
-     AUTO-UPDATE SYSTEM
-     To release a new version:
-       1. Edit your index.html
-       2. Push it to GitHub — that's it! ✅
-     ===================================================== -->
+<!-- Auto-update: always load latest from GitHub Pages when online -->
 <script>
-(function () {
-  const GITHUB_PAGES = 'https://kioshisaiki-lab.github.io/Love-tree';
-  const HTML_URL     = GITHUB_PAGES + '/index.html';
-
-  /* ── BANNER ──────────────────────────────────────────── */
-  function showBanner(html) {
-    if (document.getElementById('update-banner')) return;
-    const banner = document.createElement('div');
-    banner.id = 'update-banner';
-    banner.innerHTML = `
-      <span style="flex:1">✨ A new update is ready!</span>
-      <button id="upd-btn" style="
-        background:#a855f7;color:#fff;border:none;border-radius:20px;
-        padding:8px 20px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;">
-        Update now
-      </button>
-      <button id="upd-later" style="
-        background:transparent;border:none;color:#888;font-size:20px;
-        cursor:pointer;padding:0 4px;line-height:1;">✕</button>
-    `;
-    Object.assign(banner.style, {
-      position:'fixed', bottom:'0', left:'0', right:'0',
-      display:'flex', alignItems:'center', gap:'12px',
-      padding:'14px 20px',
-      background:'rgba(255,255,255,0.92)',
-      backdropFilter:'blur(12px)',
-      borderTop:'1px solid rgba(168,85,247,0.25)',
-      boxShadow:'0 -4px 20px rgba(168,85,247,0.15)',
-      fontFamily:'system-ui,sans-serif', fontSize:'14px', color:'#333',
-      zIndex:'99999'
-    });
-    document.body.appendChild(banner);
-    document.getElementById('upd-btn').onclick = function() {
-      banner.innerHTML = '<span style="flex:1;text-align:center">⏳ Loading update…</span>';
-      // Navigate directly to GitHub Pages — most reliable method
-      window.location.href = GITHUB_PAGES + '/index.html?t=' + Date.now();
-    };
-    document.getElementById('upd-later').onclick = () => banner.remove();
-  }
-
-  /* ── CHECK ───────────────────────────────────────────── */
-  function checkForUpdate() {
-    if (!navigator.onLine) return;
-    fetch(HTML_URL + '?t=' + Date.now(), { cache: 'no-store' })
-      .then(r => { if (!r.ok) throw new Error(); return r.text(); })
-      .then(remoteHTML => {
-        // Compare a fingerprint: length + first 500 chars
-        const remoteSnap = remoteHTML.length + '|' + remoteHTML.slice(0, 500);
-        const currentSnap = document.documentElement.outerHTML.length + '|' + document.documentElement.outerHTML.slice(0, 500);
-        if (remoteSnap !== currentSnap) {
-          window.__pendingHTML = remoteHTML;
-          showBanner(remoteHTML);
-        }
-      })
-      .catch(() => {});
-  }
-
-  setTimeout(checkForUpdate, 3000);
-})();
+  (function(){
+    const LIVE_URL = 'https://kioshisaiki-lab.github.io/Love-tree/';
+    // Only redirect if we're NOT already on GitHub Pages
+    if(window.location.href.indexOf('github.io') === -1 && navigator.onLine){
+      window.location.replace(LIVE_URL);
+    }
+  })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -2280,99 +2223,7 @@
   <!-- CREDIT -->
   <footer class="credit">created by : kyoshiiirk</footer>
 
-  <!-- ── SETTINGS FOOTER SPACER ─────────────────────── -->
-  <div style="height:32px;"></div>
-
 </main>
-
-<!-- ── FLOATING SETTINGS BUTTON ───────────────────────── -->
-<button onclick="document.getElementById('settings-modal').style.display='flex'" style="
-  position:absolute;top:18px;right:18px;z-index:9000;
-  width:34px;height:34px;border-radius:50%;border:none;
-  background:rgba(255,255,255,0.75);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  box-shadow:0 2px 12px rgba(168,85,247,0.18);
-  font-size:1.05rem;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;">⚙️</button>
-
-<!-- ── SETTINGS MODAL ──────────────────────────────────── -->
-<div id="settings-modal" style="
-  display:none;position:fixed;inset:0;z-index:9999;
-  align-items:center;justify-content:center;
-  background:rgba(30,10,20,0.35);backdrop-filter:blur(6px);">
-  <div style="
-    background:rgba(255,255,255,0.95);border-radius:28px;
-    padding:28px 22px;width:88%;max-width:360px;
-    box-shadow:0 8px 32px rgba(168,85,247,0.18);
-    position:relative;">
-
-    <!-- Close -->
-    <button onclick="document.getElementById('settings-modal').style.display='none'" style="
-      position:absolute;top:14px;right:16px;
-      background:none;border:none;font-size:1.3rem;cursor:pointer;color:#aaa;">✕</button>
-
-    <!-- Title -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;">
-      <span style="font-size:1.4rem;">⚙️</span>
-      <span style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--burgundy);">Settings</span>
-    </div>
-
-    <!-- Auto-update row -->
-    <div style="background:rgba(253,244,255,0.8);border-radius:18px;padding:16px 16px;display:flex;align-items:center;gap:12px;">
-      <span style="font-size:1.5rem;" id="upd-status-icon">🔄</span>
-      <div style="flex:1;min-width:0;">
-        <div style="font-family:'Jost',sans-serif;font-weight:600;font-size:0.92rem;color:var(--burgundy);">Auto Update</div>
-        <div id="upd-status-text" style="font-family:'Jost',sans-serif;font-size:0.75rem;color:#be185d;margin-top:3px;">Checking…</div>
-      </div>
-      <button onclick="window.__checkUpdateNow && window.__checkUpdateNow()" style="
-        background:linear-gradient(135deg,var(--pink),var(--purple));
-        color:#fff;border:none;border-radius:14px;
-        padding:7px 13px;font-size:0.73rem;font-weight:600;
-        cursor:pointer;font-family:'Jost',sans-serif;white-space:nowrap;">Check now</button>
-    </div>
-
-  </div>
-</div>
-
-<script>
-window.__checkUpdateNow = function() {
-  const icon = document.getElementById('upd-status-icon');
-  const text = document.getElementById('upd-status-text');
-  if (!navigator.onLine) {
-    icon.textContent = '📵';
-    text.textContent = 'No internet connection';
-    return;
-  }
-  icon.textContent = '🔄';
-  text.textContent = 'Checking for updates…';
-  const GITHUB_PAGES = 'https://kioshisaiki-lab.github.io/Love-tree';
-  const HTML_URL = GITHUB_PAGES + '/index.html';
-
-  fetch(HTML_URL + '?t=' + Date.now(), { cache: 'no-store' })
-    .then(r => { if (!r.ok) throw new Error(); return r.text(); })
-    .then(remoteHTML => {
-      // Compare actual content with what's running
-      const currentHTML = document.documentElement.outerHTML;
-      // Strip dynamic parts (timer digits) before comparing
-      const clean = s => s.replace(/\d{2,}/g, '#');
-      if (clean(remoteHTML) !== clean(currentHTML)) {
-        icon.textContent = '✨';
-        text.textContent = 'Update available! Tap "Update now" below.';
-        // Store remote HTML for instant update
-        window.__pendingHTML = remoteHTML;
-      } else {
-        icon.textContent = '✅';
-        text.textContent = "You're on the latest version!";
-        window.__pendingHTML = null;
-      }
-    })
-    .catch(() => {
-      icon.textContent = '⚠️';
-      text.textContent = 'Could not reach server. Try again.';
-    });
-};
-setTimeout(function(){ window.__checkUpdateNow && window.__checkUpdateNow(); }, 3500);
-</script>
 
 <script>
 /* ===== CONFIG ===== */
