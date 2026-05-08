@@ -71,32 +71,15 @@
       });
   }
 
-  // "Update now" — download the new file so the user can replace it
+  // "Update now" — apply the new HTML instantly in place
   window.applyUpdate = function() {
     const html = pendingHTML;
     if (!html) return;
-
-    try {
-      // Save new fingerprint so banner won't reappear for this version
-      store.set(STORE_KEY, fingerprint(html));
-
-      // Trigger a download of the new index.html
-      const blob = new Blob([html], { type: "text/html" });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href     = url;
-      a.download = "index.html";
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
-
-      hideUpdateBanner();
-      pendingHTML = null;
-    } catch(e) {
-      // Fallback: open GitHub URL in a new tab
-      window.open(GITHUB_URL, "_blank");
-      hideUpdateBanner();
-    }
+    store.set(STORE_KEY, fingerprint(html));
+    pendingHTML = null;
+    document.open();
+    document.write(html);
+    document.close();
   };
 
   window.dismissUpdate = function() {
@@ -4221,7 +4204,7 @@ pulseBtn.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') ope
 </style>
 <div id="update-banner">
   <span class="upd-text">✨ New version available!</span>
-  <button class="upd-btn" onclick="applyUpdate()">Download & replace</button>
+  <button class="upd-btn" onclick="applyUpdate()">Update now</button>
   <button class="upd-close" onclick="dismissUpdate()">✕</button>
 </div>
 
