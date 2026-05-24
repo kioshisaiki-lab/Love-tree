@@ -2,94 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<script>
-  // ── AUTO-UPDATE FROM GITHUB ──────────────────────────────────────────
-  const GITHUB_URL = "https://raw.githubusercontent.com/kioshisaiki-lab/Love-tree/main/index.html";
-  const STORE_KEY   = "lovetree_version";
-  const CHECK_KEY   = "lovetree_lastcheck";
-  const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
-
-  // ── Storage helpers that work on local files (content://) ────────────
-  // localStorage throws or silently fails on some Android WebViews when
-  // the file is opened via content://. We fall back to sessionStorage,
-  // then to an in-memory object so the page never hard-crashes.
-  const _mem = {};
-  const store = {
-    get(k)    { try { return localStorage.getItem(k); }    catch(e){} try { return sessionStorage.getItem(k); } catch(e){} return _mem[k]||null; },
-    set(k,v)  { try { localStorage.setItem(k,v); return; } catch(e){} try { sessionStorage.setItem(k,v); return; } catch(e){} _mem[k]=v; },
-    del(k)    { try { localStorage.removeItem(k); }         catch(e){} try { sessionStorage.removeItem(k); }      catch(e){} delete _mem[k]; },
-  };
-
-  let pendingHTML = null;
-
-  function showUpdateBanner() {
-    const banner = document.getElementById("update-banner");
-    if (banner) banner.classList.add("visible");
-  }
-
-  function hideUpdateBanner() {
-    const banner = document.getElementById("update-banner");
-    if (banner) banner.classList.remove("visible");
-  }
-
-  function fingerprint(html) {
-    // A cheap but reliable fingerprint: length + hash of first 1000 chars
-    let h = 0;
-    const s = html.slice(0, 1000);
-    for (let i = 0; i < s.length; i++) { h = (Math.imul(31, h) + s.charCodeAt(i)) | 0; }
-    return html.length + "|" + (h >>> 0);
-  }
-
-  function checkForUpdate() {
-    const now = Date.now();
-    const lastCheck = parseInt(store.get(CHECK_KEY) || "0");
-    if (now - lastCheck < CHECK_INTERVAL) return;
-    store.set(CHECK_KEY, now);
-
-    fetch(GITHUB_URL + "?nocache=" + now)
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
-      .then(html => {
-        const fp      = fingerprint(html);
-        const stored  = store.get(STORE_KEY);
-
-        if (!stored) {
-          // First run — record current fingerprint, no banner
-          store.set(STORE_KEY, fp);
-          return;
-        }
-
-        if (stored !== fp) {
-          // GitHub file has actually changed — show update banner
-          pendingHTML = html;
-          showUpdateBanner();
-        }
-        // If fingerprints match: file is unchanged, stay silent
-      })
-      .catch(() => {
-        // Network error or CORS — silently ignore, try again next interval
-        store.del(CHECK_KEY); // allow retry sooner
-      });
-  }
-
-  // "Update now" — apply the new HTML instantly in place
-  window.applyUpdate = function() {
-    const html = pendingHTML;
-    if (!html) return;
-    store.set(STORE_KEY, fingerprint(html));
-    pendingHTML = null;
-    document.open();
-    document.write(html);
-    document.close();
-  };
-
-  window.dismissUpdate = function() {
-    hideUpdateBanner();
-    // Don't clear pendingHTML — banner can come back on next check
-  };
-
-  window.addEventListener("load", checkForUpdate);
-  // ────────────────────────────────────────────────────────────────────
-</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Our Love Tree</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -1842,6 +1754,253 @@
     100% { transform: translate3d(var(--bdrift), 110vh, 0) rotate(var(--bspin)); opacity: 0; }
   }
 
+  /* ---- PROPOSAL SECTION ---- */
+  .proposal-section {
+    margin-top: 24px; width: 100%; max-width: 680px;
+    opacity: 0; animation: popIn 0.9s cubic-bezier(0.34,1.56,0.64,1) 3.4s forwards;
+  }
+  .proposal-frame {
+    padding: 40px 40px 36px; border-radius: 36px; text-align: center; position: relative; overflow: hidden;
+  }
+  .proposal-label {
+    font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.55em; text-transform: uppercase;
+    background: linear-gradient(90deg, var(--burgundy), var(--pink));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 18px;
+  }
+  .proposal-ring-icon {
+    font-size: 3.5rem; display: block; margin: 0 auto 16px;
+    animation: ringFloat 3.5s ease-in-out infinite;
+    filter: drop-shadow(0 4px 18px rgba(244,114,182,0.5));
+    cursor: pointer; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @keyframes ringFloat {
+    0%,100% { transform: translateY(0) rotate(-5deg); }
+    50%     { transform: translateY(-8px) rotate(5deg); }
+  }
+  .proposal-question {
+    font-family: 'Playfair Display', serif; font-style: italic;
+    font-size: clamp(1.4rem, 4vw, 2rem); line-height: 1.3;
+    background: linear-gradient(135deg, var(--burgundy) 0%, var(--burgundy-mid) 45%, var(--purple) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 8px;
+  }
+  .proposal-sub {
+    font-family: 'Jost', sans-serif; font-size: 0.82rem;
+    color: var(--burgundy-mid); opacity: 0.65; letter-spacing: 0.06em; margin-bottom: 28px;
+  }
+  .proposal-btns {
+    display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+  }
+  .proposal-yes {
+    padding: 14px 36px; border-radius: 50px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, var(--burgundy), var(--purple));
+    color: #fff; font-family: 'Jost', sans-serif; font-size: 1rem; font-weight: 600;
+    letter-spacing: 0.08em;
+    box-shadow: 0 6px 20px rgba(168,85,247,0.38);
+    transition: transform 0.2s, box-shadow 0.2s;
+    animation: yesPulse 2.5s ease-in-out infinite;
+  }
+  @keyframes yesPulse {
+    0%,100% { box-shadow: 0 6px 20px rgba(168,85,247,0.38); }
+    50%     { box-shadow: 0 10px 36px rgba(168,85,247,0.62); }
+  }
+  .proposal-yes:hover { transform: translateY(-3px) scale(1.04); }
+  .proposal-yes:active { transform: scale(0.96) !important; }
+  .proposal-no {
+    padding: 14px 28px; border-radius: 50px;
+    border: 1.5px solid rgba(244,114,182,0.35);
+    background: rgba(255,255,255,0.6);
+    color: var(--burgundy-mid); font-family: 'Jost', sans-serif; font-size: 0.88rem;
+    font-weight: 500; letter-spacing: 0.06em; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .proposal-no:hover { background: rgba(255,255,255,0.9); }
+
+  /* Already answered state */
+  .proposal-answered {
+    display: none; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .proposal-answered-icon { font-size: 3rem; animation: ringFloat 3.5s ease-in-out infinite; }
+  .proposal-answered-text {
+    font-family: 'Playfair Display', serif; font-style: italic;
+    font-size: clamp(1.1rem, 2.5vw, 1.4rem); line-height: 1.5;
+    background: linear-gradient(135deg, var(--burgundy), var(--purple));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .proposal-answered-date {
+    font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--purple); opacity: 0.55; margin-top: 4px;
+  }
+  .proposal-reset-btn {
+    margin-top: 8px; background: none; border: none; cursor: pointer;
+    font-family: 'Jost', sans-serif; font-size: 0.72rem; letter-spacing: 0.1em;
+    color: var(--pink); opacity: 0.45; text-transform: uppercase; text-decoration: underline;
+    transition: opacity 0.2s;
+  }
+  .proposal-reset-btn:hover { opacity: 0.8; }
+
+  /* PROPOSAL OVERLAY — full screen cinematic moment */
+  .proposal-overlay {
+    position: fixed; inset: 0; z-index: 950; pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+  }
+  .proposal-overlay.open { pointer-events: all; }
+  @keyframes proposalOverlayIn {
+    0%   { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes proposalOverlayOut {
+    0%   { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .proposal-overlay-bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 90% 80% at 50% 50%,
+      rgba(136,19,55,0.82) 0%,
+      rgba(168,85,247,0.72) 45%,
+      rgba(30,10,20,0.92) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .proposal-overlay-content {
+    position: relative; z-index: 2; text-align: center;
+    padding: 40px 32px; max-width: 500px; width: 90%;
+    min-height: 420px;
+  }
+  .proposal-overlay-ring {
+    font-size: clamp(5rem, 18vw, 8rem);
+    display: block; margin: 0 auto 20px;
+    filter: drop-shadow(0 0 30px rgba(244,114,182,0.9)) drop-shadow(0 0 60px rgba(168,85,247,0.6));
+    opacity: 0; transform: scale(0.3) rotate(-20deg);
+  }
+  @keyframes ringPop {
+    0%   { opacity: 0; transform: scale(0.3) rotate(-20deg); }
+    50%  { opacity: 1; transform: scale(1.12) rotate(6deg); }
+    70%  { transform: scale(0.94) rotate(-3deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  }
+  .proposal-overlay-letter {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 24px; padding: 28px 28px 24px;
+    text-align: left; margin-bottom: 24px;
+    opacity: 0; transform: translateY(20px);
+  }
+  @keyframes letterSlideIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .proposal-overlay-letter-label {
+    font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.5em;
+    text-transform: uppercase; color: rgba(255,255,255,0.55); margin-bottom: 14px;
+  }
+  .proposal-overlay-letter-text {
+    font-family: 'Playfair Display', serif; font-style: italic;
+    font-size: clamp(0.9rem, 2vw, 1.1rem); line-height: 1.85;
+    color: rgba(255,255,255,0.92);
+  }
+  .proposal-overlay-letter-sig {
+    font-family: 'Dancing Script', cursive; font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+    color: #fda4af; margin-top: 14px; text-align: right;
+  }
+  .proposal-overlay-question {
+    font-family: 'Playfair Display', serif; font-style: italic;
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    background: linear-gradient(135deg, #fff, #fda4af, #c084fc);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    filter: drop-shadow(0 2px 12px rgba(244,114,182,0.5));
+    margin-bottom: 28px;
+    opacity: 0; transform: translateY(10px);
+  }
+  @keyframes questionFade {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .proposal-overlay-btns {
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    opacity: 0; transform: translateY(10px);
+  }
+  @keyframes btnsFade {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .proposal-overlay-yes {
+    padding: 16px 44px; border-radius: 50px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #fff, #fda4af);
+    color: var(--burgundy); font-family: 'Jost', sans-serif;
+    font-size: 1.1rem; font-weight: 700; letter-spacing: 0.08em;
+    box-shadow: 0 6px 28px rgba(255,255,255,0.35);
+    transition: transform 0.18s, box-shadow 0.18s;
+  }
+  .proposal-overlay-yes:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 10px 40px rgba(255,255,255,0.5); }
+  .proposal-overlay-yes:active { transform: scale(0.96); }
+  .proposal-overlay-no {
+    padding: 16px 32px; border-radius: 50px;
+    border: 1.5px solid rgba(255,255,255,0.35); background: transparent;
+    color: rgba(255,255,255,0.75); font-family: 'Jost', sans-serif;
+    font-size: 0.92rem; letter-spacing: 0.06em; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .proposal-overlay-no:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+  /* YES celebration */
+  .proposal-yes-overlay {
+    position: fixed; inset: 0; z-index: 960; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    opacity: 0; text-align: center; padding: 20px;
+  }
+  .proposal-yes-overlay.show { pointer-events: all; }
+  @keyframes yesCelebIn {
+    0%   { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  .proposal-yes-bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 100% 100% at 50% 50%,
+      rgba(136,19,55,0.9) 0%, rgba(168,85,247,0.85) 50%, rgba(30,10,20,0.95) 100%);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .proposal-yes-ring {
+    font-size: clamp(6rem, 22vw, 10rem); position: relative; z-index: 2;
+    opacity: 0; transform: scale(0.2);
+    filter: drop-shadow(0 0 40px rgba(244,114,182,0.9)) drop-shadow(0 0 80px rgba(168,85,247,0.7));
+  }
+  @keyframes yesRingPop {
+    0%   { opacity: 0; transform: scale(0.2) rotate(-30deg); }
+    40%  { opacity: 1; transform: scale(1.18) rotate(8deg); }
+    60%  { transform: scale(0.92) rotate(-4deg); }
+    80%  { transform: scale(1.06) rotate(2deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  }
+  .proposal-yes-text {
+    position: relative; z-index: 2; margin-top: 20px;
+    font-family: 'Playfair Display', serif; font-style: italic;
+    font-size: clamp(1.8rem, 7vw, 3rem); line-height: 1.2;
+    background: linear-gradient(135deg, #fff 0%, #fda4af 50%, #c084fc 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    filter: drop-shadow(0 2px 16px rgba(244,114,182,0.7));
+    opacity: 0; transform: translateY(20px);
+  }
+  @keyframes yesTextPop {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .proposal-yes-sub {
+    position: relative; z-index: 2; margin-top: 12px;
+    font-family: 'Dancing Script', cursive; font-size: clamp(1.1rem, 3vw, 1.5rem);
+    color: #fda4af; opacity: 0; transform: translateY(10px);
+  }
+  @keyframes yesSubFade { to { opacity: 1; transform: translateY(0); } }
+  .proposal-yes-close {
+    position: relative; z-index: 2; margin-top: 32px;
+    padding: 13px 36px; border-radius: 50px; border: 1.5px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.15); color: #fff;
+    font-family: 'Jost', sans-serif; font-size: 0.88rem; letter-spacing: 0.1em;
+    cursor: pointer; transition: background 0.2s;
+    opacity: 0;
+  }
+  @keyframes yesCloseFade { to { opacity: 1; } }
+  .proposal-yes-close:hover { background: rgba(255,255,255,0.25); }
+
 </style>
 </head>
 <body>
@@ -1930,8 +2089,6 @@
 
   <!-- TREE -->
   <section class="tree-section glass" aria-label="Love tree illustration" id="tree-section-el">
-    <!-- Butterfly canvas inside tree so it scrolls naturally -->
-    <canvas id="bf-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;border-radius:42px;"></canvas>
     <!-- Night sky overlay — visible only at night / dusk / dawn -->
     <div class="sky-overlay" id="sky-overlay" aria-hidden="true">
       <div class="sky-overlay-gradient"></div>
@@ -2299,6 +2456,364 @@
     <div id="bloom-leaves-container"></div>
   </div>
 
+  <!-- PROPOSAL SECTION -->
+  <section class="proposal-section" aria-label="Proposal">
+    <div class="proposal-frame glass" id="proposal-frame">
+      <span class="corner-rose tl">💍</span>
+      <span class="corner-rose tr">🌹</span>
+      <span class="corner-rose bl">✨</span>
+      <span class="corner-rose br">💗</span>
+      <div class="proposal-label">A Question For You</div>
+
+      <!-- Unanswered state -->
+      <div id="proposal-ask-wrap">
+        <span class="proposal-ring-icon" id="proposal-ring-icon">💍</span>
+        <div class="proposal-question">Will you marry me?</div>
+        <div class="proposal-sub">tap the ring to read my letter first 💌</div>
+      </div>
+
+      <!-- Already answered state -->
+      <div class="proposal-answered" id="proposal-answered-wrap">
+        <span class="proposal-answered-icon">💍</span>
+        <div class="proposal-answered-text" id="proposal-answered-text"></div>
+        <div class="proposal-answered-date" id="proposal-answered-date"></div>
+        <button class="proposal-reset-btn" id="proposal-reset-btn">start over</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROPOSAL OVERLAY (cinematic letter + question) -->
+  <div class="proposal-overlay" id="proposal-overlay" role="dialog" aria-modal="true" aria-label="Proposal">
+    <div class="proposal-overlay-bg"></div>
+    <div class="proposal-overlay-content">
+      <span class="proposal-overlay-ring" id="proposal-overlay-ring">💍</span>
+      <div class="proposal-overlay-letter" id="proposal-overlay-letter">
+        <div class="proposal-overlay-letter-label">,</div>
+        <div class="proposal-overlay-letter-text" id="proposal-letter-typed"></div>
+        <div class="proposal-overlay-letter-sig">— Max 💗</div>
+      </div>
+      <div class="proposal-overlay-question" id="proposal-overlay-question">Will you marry me?</div>
+      <div class="proposal-overlay-btns" id="proposal-overlay-btns">
+        <button class="proposal-overlay-yes" id="proposal-overlay-yes-btn">Yes, always 💍</button>
+        <div style="position:relative;display:inline-block;">
+          <button class="proposal-overlay-no" id="proposal-overlay-no-btn" style="position:relative;">not yet…</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- YES CELEBRATION OVERLAY -->
+  <div class="proposal-yes-overlay" id="proposal-yes-overlay" role="alertdialog" aria-label="You said yes!">
+    <div class="proposal-yes-bg"></div>
+    <span class="proposal-yes-ring" id="proposal-yes-ring">💍</span>
+    <div class="proposal-yes-text" id="proposal-yes-text"></div>
+    <div class="proposal-yes-sub" id="proposal-yes-sub"></div>
+    <button class="proposal-yes-close" id="proposal-yes-close">hold it close 💗</button>
+  </div>
+
+  <!-- POLAROID WALL -->
+  <section id="polaroid-section" style="
+    width:100%;max-width:720px;
+    margin-top:32px;
+    padding:32px 20px 36px;
+    border-radius:36px;
+    background:var(--glass-bg);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border:1px solid var(--glass-border);
+    box-shadow:var(--glass-shadow);
+    opacity:0;animation:popIn 1s cubic-bezier(0.34,1.56,0.64,1) 1.2s forwards;
+  ">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:clamp(1.4rem,4vw,2rem);background:linear-gradient(135deg,var(--burgundy),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">📸 Our Polaroid Wall</div>
+      <div style="font-size:0.85rem;color:var(--purple);margin-top:6px;letter-spacing:0.08em;">memories across the miles</div>
+    </div>
+
+    <label id="polaroid-upload-label" style="
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      margin:0 auto 24px;width:fit-content;
+      padding:10px 24px;border-radius:50px;
+      background:linear-gradient(135deg,var(--pink),var(--purple));
+      color:#fff;font-size:0.9rem;font-weight:500;cursor:pointer;
+      box-shadow:0 4px 14px rgba(168,85,247,0.3);
+      user-select:none;-webkit-tap-highlight-color:transparent;
+    ">
+      📷 Add Photo
+      <input id="polaroid-input" type="file" accept="image/*" multiple style="display:none;">
+    </label>
+
+    <!-- Who is adding? modal -->
+    <div id="pol-who-wrap" style="display:none;margin-bottom:20px;text-align:center;">
+      <div style="font-family:'Playfair Display',serif;font-style:italic;color:var(--burgundy-mid);margin-bottom:12px;font-size:1rem;">who's adding this? 💕</div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-bottom:14px;">
+        <button id="pol-who-eunice" style="
+          padding:9px 22px;border-radius:50px;border:2px solid var(--pink);
+          background:transparent;color:var(--burgundy-mid);font-size:0.9rem;cursor:pointer;
+          transition:all 0.2s;font-family:'Jost',sans-serif;
+        ">eunice 💗</button>
+        <button id="pol-who-max" style="
+          padding:9px 22px;border-radius:50px;border:2px solid var(--purple);
+          background:transparent;color:var(--purple);font-size:0.9rem;cursor:pointer;
+          transition:all 0.2s;font-family:'Jost',sans-serif;
+        ">max 💜</button>
+      </div>
+      <button id="pol-who-cancel" style="
+        padding:6px 18px;border-radius:50px;border:none;
+        background:rgba(255,255,255,0.4);color:var(--purple);font-size:0.8rem;cursor:pointer;
+      ">cancel</button>
+    </div>
+
+    <!-- Caption input -->
+    <div id="polaroid-caption-wrap" style="display:none;margin-bottom:20px;text-align:center;">
+      <div id="pol-adder-tag" style="font-size:0.8rem;color:var(--purple);margin-bottom:8px;"></div>
+      <input id="polaroid-caption-input" type="text" placeholder="write a caption... 💕" maxlength="60" style="
+        width:80%;padding:10px 16px;border-radius:50px;
+        border:1px solid var(--glass-border);
+        background:rgba(255,255,255,0.5);
+        font-family:'Jost',sans-serif;font-size:0.9rem;
+        color:var(--dark);outline:none;text-align:center;
+      ">
+      <div style="margin-top:10px;display:flex;gap:10px;justify-content:center;">
+        <button id="polaroid-save-btn" style="
+          padding:8px 22px;border-radius:50px;border:none;
+          background:linear-gradient(135deg,var(--pink),var(--purple));
+          color:#fff;font-size:0.85rem;cursor:pointer;">Save 💾</button>
+        <button id="polaroid-cancel-btn" style="
+          padding:8px 22px;border-radius:50px;border:none;
+          background:rgba(255,255,255,0.4);
+          color:var(--purple);font-size:0.85rem;cursor:pointer;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- View photos button -->
+    <div style="text-align:center;margin-top:4px;">
+      <button id="polaroid-view-btn" onclick="(function(){
+        var grid = document.getElementById('polaroid-gallery-wrap');
+        var btn = document.getElementById('polaroid-view-btn');
+        var open = grid.style.display !== 'none';
+        grid.style.display = open ? 'none' : 'block';
+        btn.textContent = open ? '🖼️ Tap to view all photos' : '✕ Hide photos';
+      })()" style="
+        display:inline-flex;align-items:center;gap:8px;
+        padding:11px 28px;border-radius:50px;border:none;
+        background:linear-gradient(135deg,var(--pink),var(--purple));
+        color:#fff;font-family:'Jost',sans-serif;font-size:0.9rem;
+        font-weight:500;letter-spacing:0.08em;cursor:pointer;
+        box-shadow:0 4px 14px rgba(168,85,247,0.3);
+        transition:transform 0.2s,box-shadow 0.2s;
+        user-select:none;-webkit-tap-highlight-color:transparent;
+      ">🖼️ Tap to view all photos</button>
+    </div>
+
+    <!-- Collapsible photo gallery -->
+    <div id="polaroid-gallery-wrap" style="display:none;margin-top:20px;">
+      <div id="polaroid-grid" style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;"></div>
+      <div id="polaroid-empty" style="text-align:center;color:var(--purple);font-size:0.9rem;opacity:0.7;padding:20px 0;">
+        no photos yet... add your first memory 💕
+      </div>
+    </div>
+  </section>
+
+  <!-- Polaroid lightbox with swipe -->
+  <div id="polaroid-lightbox" style="
+    display:none;position:fixed;inset:0;z-index:99998;
+    background:rgba(0,0,0,0.92);
+    flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    touch-action:pan-y;
+  ">
+    <!-- close btn -->
+    <button onclick="document.getElementById('polaroid-lightbox').style.display='none'" style="
+      position:absolute;top:16px;right:16px;
+      background:rgba(255,255,255,0.15);border:none;color:#fff;
+      font-size:22px;width:40px;height:40px;border-radius:50%;cursor:pointer;
+    ">✕</button>
+
+    <!-- prev/next arrows -->
+    <button id="lb-prev" style="
+      position:absolute;left:10px;top:50%;transform:translateY(-50%);
+      background:rgba(255,255,255,0.15);border:none;color:#fff;
+      font-size:26px;width:44px;height:44px;border-radius:50%;cursor:pointer;
+    ">‹</button>
+    <button id="lb-next" style="
+      position:absolute;right:10px;top:50%;transform:translateY(-50%);
+      background:rgba(255,255,255,0.15);border:none;color:#fff;
+      font-size:26px;width:44px;height:44px;border-radius:50%;cursor:pointer;
+    ">›</button>
+
+    <!-- image -->
+    <img id="polaroid-lightbox-img" style="max-width:82vw;max-height:68vh;border-radius:4px;box-shadow:0 8px 32px rgba(0,0,0,0.6);transition:opacity 0.2s;">
+    <div id="polaroid-lightbox-cap" style="color:#fff;font-family:'Dancing Script',cursive;font-size:1.2rem;text-align:center;max-width:80vw;"></div>
+    <!-- counter -->
+    <div id="lb-counter" style="color:rgba(255,255,255,0.5);font-size:0.8rem;"></div>
+
+    <button id="polaroid-lightbox-del" style="
+      padding:7px 20px;border-radius:50px;border:none;
+      background:rgba(255,80,80,0.8);color:#fff;font-size:0.85rem;cursor:pointer;
+    ">🗑️ Delete</button>
+  </div>
+
+  <style>
+  .polaroid-item {
+    display:flex;flex-direction:column;align-items:center;
+    background:#fff;padding:10px 10px 28px;border-radius:3px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.15),0 2px 6px rgba(0,0,0,0.1);
+    width:140px;cursor:pointer;
+    transition:transform 0.25s ease,box-shadow 0.25s ease;
+  }
+  .polaroid-item:hover{ transform:scale(1.05) !important;box-shadow:0 12px 32px rgba(0,0,0,0.2); }
+  .polaroid-item img{ width:120px;height:120px;object-fit:cover;border-radius:2px;display:block; }
+  .polaroid-item .pol-cap{ margin-top:8px;font-family:'Dancing Script',cursive;font-size:0.85rem;color:#555;text-align:center;word-break:break-word;line-height:1.3; }
+  </style>
+
+  <script>
+  (function(){
+    const STORAGE_KEY='lovetree_polaroids';
+    const grid=document.getElementById('polaroid-grid');
+    const empty=document.getElementById('polaroid-empty');
+    const input=document.getElementById('polaroid-input');
+    const polWhoWrap=document.getElementById('pol-who-wrap');
+    const polWhoEunice=document.getElementById('pol-who-eunice');
+    const polWhoMax=document.getElementById('pol-who-max');
+    const polWhoCancel=document.getElementById('pol-who-cancel');
+    const capWrap=document.getElementById('polaroid-caption-wrap');
+    const capInput=document.getElementById('polaroid-caption-input');
+    const adderTag=document.getElementById('pol-adder-tag');
+    const saveBtn=document.getElementById('polaroid-save-btn');
+    const cancelBtn=document.getElementById('polaroid-cancel-btn');
+    const lightbox=document.getElementById('polaroid-lightbox');
+    const lbImg=document.getElementById('polaroid-lightbox-img');
+    const lbCap=document.getElementById('polaroid-lightbox-cap');
+    const lbDel=document.getElementById('polaroid-lightbox-del');
+    const lbPrev=document.getElementById('lb-prev');
+    const lbNext=document.getElementById('lb-next');
+    const lbCounter=document.getElementById('lb-counter');
+
+    let pendingFiles=[],pendingIndex=0,pendingWho=null,currentLbIndex=0;
+
+    function load(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]; }catch(e){ return []; } }
+    function save(p){ localStorage.setItem(STORAGE_KEY,JSON.stringify(p)); }
+    function randTilt(){ return (Math.random()*8-4).toFixed(1); }
+    function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function renderAll(){
+      const photos=load();
+      grid.innerHTML='';
+      empty.style.display=photos.length===0?'block':'none';
+      photos.forEach(function(p,i){
+        const div=document.createElement('div');
+        div.className='polaroid-item';
+        div.style.transform='rotate('+p.tilt+'deg)';
+        const whoColor=p.who==='eunice'?'#f472b6':'#a855f7';
+        const whoEmoji=p.who==='eunice'?'💗':'💜';
+        div.innerHTML='<img src="'+p.dataUrl+'" alt="memory"><div class="pol-cap">'+escHtml(p.caption)+'</div>'+(p.who?'<div style="font-size:0.7rem;color:'+whoColor+';margin-top:3px;">'+whoEmoji+' '+escHtml(p.who)+'</div>':'');
+        div.addEventListener('click',function(){ openLightbox(i); });
+        grid.appendChild(div);
+      });
+    }
+
+    function openLightbox(index){
+      const photos=load();
+      if(!photos.length) return;
+      currentLbIndex=Math.max(0,Math.min(index,photos.length-1));
+      showLbPhoto(photos);
+      lightbox.style.display='flex';
+    }
+
+    function showLbPhoto(photos){
+      if(!photos) photos=load();
+      const p=photos[currentLbIndex];
+      lbImg.style.opacity='0';
+      setTimeout(function(){
+        lbImg.src=p.dataUrl;
+        const whoEmoji=p.who==='eunice'?'💗':'💜';
+        lbCap.textContent=(p.caption||'')+(p.who?' — '+whoEmoji+' '+p.who:'');
+        lbCounter.textContent=(currentLbIndex+1)+' / '+photos.length;
+        lbImg.style.opacity='1';
+      },150);
+      lbPrev.style.opacity=currentLbIndex===0?'0.3':'1';
+      lbNext.style.opacity=currentLbIndex===photos.length-1?'0.3':'1';
+    }
+
+    lbPrev.addEventListener('click',function(){ const p=load(); if(currentLbIndex>0){currentLbIndex--;showLbPhoto(p);} });
+    lbNext.addEventListener('click',function(){ const p=load(); if(currentLbIndex<p.length-1){currentLbIndex++;showLbPhoto(p);} });
+
+    let tsX=0;
+    lightbox.addEventListener('touchstart',function(e){ tsX=e.touches[0].clientX; },{passive:true});
+    lightbox.addEventListener('touchend',function(e){
+      const dx=e.changedTouches[0].clientX-tsX;
+      if(Math.abs(dx)>40){
+        const photos=load();
+        if(dx<0&&currentLbIndex<photos.length-1){currentLbIndex++;showLbPhoto(photos);}
+        else if(dx>0&&currentLbIndex>0){currentLbIndex--;showLbPhoto(photos);}
+      }
+    },{passive:true});
+
+    lbDel.addEventListener('click',function(){
+      const photos=load();
+      photos.splice(currentLbIndex,1);
+      save(photos);
+      if(!photos.length){lightbox.style.display='none';renderAll();return;}
+      currentLbIndex=Math.min(currentLbIndex,photos.length-1);
+      showLbPhoto(photos);
+      renderAll();
+    });
+
+    // Step 1: file picked → show who picker
+    input.addEventListener('change',function(){
+      if(!input.files.length) return;
+      pendingFiles=Array.from(input.files);
+      pendingIndex=0; pendingWho=null;
+      input.value='';
+      polWhoEunice.style.background='transparent'; polWhoEunice.style.color='var(--burgundy-mid)';
+      polWhoMax.style.background='transparent'; polWhoMax.style.color='var(--purple)';
+      polWhoWrap.style.display='block';
+    });
+
+    function selectWho(who){
+      pendingWho=who;
+      polWhoEunice.style.background=who==='eunice'?'var(--pink)':'transparent';
+      polWhoEunice.style.color=who==='eunice'?'#fff':'var(--burgundy-mid)';
+      polWhoMax.style.background=who==='max'?'var(--purple)':'transparent';
+      polWhoMax.style.color=who==='max'?'#fff':'var(--purple)';
+      setTimeout(function(){ polWhoWrap.style.display='none'; processNextPending(); },300);
+    }
+
+    polWhoEunice.addEventListener('click',function(){ selectWho('eunice'); });
+    polWhoMax.addEventListener('click',function(){ selectWho('max'); });
+    polWhoCancel.addEventListener('click',function(){ pendingFiles=[];polWhoWrap.style.display='none'; });
+
+    // Step 2: caption per photo
+    function processNextPending(){
+      if(pendingIndex>=pendingFiles.length){ pendingFiles=[];pendingIndex=0;capWrap.style.display='none';renderAll();return; }
+      const reader=new FileReader();
+      reader.onload=function(e){
+        capInput.value='';
+        capInput.placeholder='caption for photo '+(pendingIndex+1)+' of '+pendingFiles.length+' 💕';
+        capInput.dataset.dataUrl=e.target.result;
+        const whoEmoji=pendingWho==='eunice'?'💗':'💜';
+        adderTag.textContent='adding as: '+whoEmoji+' '+pendingWho;
+        capWrap.style.display='block';
+        capInput.focus();
+      };
+      reader.readAsDataURL(pendingFiles[pendingIndex]);
+    }
+
+    saveBtn.addEventListener('click',function(){
+      const dataUrl=capInput.dataset.dataUrl;
+      if(!dataUrl) return;
+      const photos=load();
+      photos.push({ id:Date.now().toString(), dataUrl:dataUrl, caption:capInput.value.trim(), who:pendingWho, tilt:randTilt() });
+      try{ save(photos); }
+      catch(e){ alert('Storage full! Try deleting some photos.'); capWrap.style.display='none'; pendingFiles=[]; return; }
+      pendingIndex++;
+      processNextPending();
+    });
+
+    cancelBtn.addEventListener('click',function(){ pendingFiles=[];pendingIndex=0;capWrap.style.display='none'; });
+    renderAll();
+  })();
+  </script>
+
   <!-- CREDIT -->
   <footer class="credit">created by : kyoshiiirk</footer>
 
@@ -2556,7 +3071,6 @@ if (!prefersReduced) setTimeout(spawnPetals, 3200);
     opened = true;
     overlay.classList.add('hide');
     setTimeout(()=> overlay.remove(), 900);
-    if (window._musicEnabled === false) return;
     audio.volume = 0;
     audio.play().then(()=>{
       let v = 0;
@@ -2943,7 +3457,7 @@ setTimeout(typeMessage, prefersReduced ? 200 : 3100);
 <!-- ===== FIREBASE (proper module — works on all devices/browsers) ===== -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, serverTimestamp, updateDoc }
+import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, serverTimestamp, updateDoc, getDocs, limit }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -3664,25 +4178,9 @@ let lastPulseSentAt = 0;
 const PULSE_COOLDOWN = 4000; // ms between sends
 
 // Vibrate helper (mobile only, silent fail)
-// Vibration — loads @yandeu/js-bridge via esm.sh CDN (works in plain HTML)
-// Falls back to navigator.vibrate in regular browser
-let _Vibration = null;
-(async () => {
+function tryVibrate(pattern){
   try {
-    const mod = await import('https://esm.sh/@yandeu/js-bridge/lib/plugins/vibration.js');
-    _Vibration = mod.Vibration;
-    console.log('Vibration bridge loaded:', _Vibration);
-  } catch(e) {
-    console.log('Bridge failed:', e.message);
-  }
-})();
-
-async function tryVibrate(pattern){
-  try {
-    if(_Vibration){
-      const intensities = pattern.map(ms => ms > 0 ? 255 : 0);
-      await _Vibration.vibrateWithPattern(pattern, intensities);
-    } else if(navigator.vibrate){
+    if(navigator.vibrate){
       navigator.vibrate(pattern);
     }
   } catch(e) {}
@@ -3768,11 +4266,18 @@ onSnapshot(query(pulsesCol, orderBy('createdAt', 'desc')), snapshot => {
   snapshot.docChanges().forEach(change => {
     if(change.type !== 'added') return;
     const data = change.doc.data();
-    if(change.doc.id === lastPulseDocId) return; // our own send, skip incoming anim
+
+    // Only show animation if this pulse was sent BY the other person
+    // i.e. the sender is NOT the person who last sent from this device
+    if(change.doc.id === lastPulseDocId) return; // literally our own just-sent doc
 
     if(data.type === 'pulse'){
-      // Check if this arrived within 3s of our own last send → simultaneous!
-      const theirTs = data.createdAt ? data.createdAt.toMillis() : Date.now();
+      // If "to" field exists, only react if it matches someone other than the sender
+      // This means: show only pulses the OTHER person sent (from ≠ selectedPulseSender history)
+      // Simple rule: skip if "from" matches who we just sent as
+      if(data.from && data.from === selectedPulseSender && lastPulseSentAt > 0 && (Date.now() - lastPulseSentAt) < 5000) return;
+
+      // Check simultaneous tap (both sent within 3.5s of each other)
       const timeSinceOurSend = Date.now() - lastPulseSentAt;
       if(lastPulseSentAt > 0 && timeSinceOurSend < 3500){
         showBloom();
@@ -3781,6 +4286,27 @@ onSnapshot(query(pulsesCol, orderBy('createdAt', 'desc')), snapshot => {
       }
     }
   });
+});
+
+// Re-check for missed pulses when app becomes visible again (WebView wake-up fix)
+let lastVisibleCheck = Date.now();
+document.addEventListener('visibilitychange', async () => {
+  if(document.visibilityState !== 'visible') return;
+  try {
+    const q = query(pulsesCol, orderBy('createdAt', 'desc'), limit(3));
+    const snap = await getDocs(q);
+    snap.forEach(docSnap => {
+      if(docSnap.id === lastPulseDocId) return;
+      const data = docSnap.data();
+      if(data.type !== 'pulse') return;
+      const ts = data.createdAt ? data.createdAt.toMillis() : 0;
+      // Only show if it arrived after we last checked AND after app was last visible
+      if(ts < lastVisibleCheck) return;
+      if(data.from && data.from === selectedPulseSender && lastPulseSentAt > 0 && (Date.now() - lastPulseSentAt) < 5000) return;
+      showIncomingPulse(data.from || '💓');
+    });
+  } catch(e){}
+  lastVisibleCheck = Date.now();
 });
 
 // Tap handler
@@ -3830,8 +4356,9 @@ pulseModalSend.addEventListener('click', async () => {
   pulseStatus.textContent = selectedPulseSender + ' sent a heartbeat 💓';
   setTimeout(()=>{ pulseStatus.textContent=''; }, 3000);
   try {
+    const to = selectedPulseSender === 'eunice' ? 'max' : 'eunice';
     const ref = await addDoc(pulsesCol, {
-      type: 'pulse', from: selectedPulseSender, createdAt: serverTimestamp()
+      type: 'pulse', from: selectedPulseSender, to, createdAt: serverTimestamp()
     });
     lastPulseDocId = ref.id;
   } catch(e){
@@ -4085,559 +4612,353 @@ pulseBtn.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') ope
 })();
 </script>
 
-<!-- ── UPDATE BANNER ── -->
-<style>
-  #update-banner {
-    position: fixed;
-    bottom: -100px;
-    left: 0; right: 0;
-    z-index: 99999;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    margin: 0 12px 16px;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.72);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.85);
-    box-shadow: 0 8px 32px rgba(168,85,247,0.18), 0 2px 8px rgba(244,114,182,0.14);
-    transition: bottom 0.5s cubic-bezier(0.34,1.56,0.64,1);
-    gap: 10px;
-  }
-  #update-banner.visible {
-    bottom: 0;
-  }
-  #update-banner .upd-text {
-    font-family: 'Jost', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    color: #881337;
-    flex: 1;
-  }
-  #update-banner .upd-btn {
-    background: linear-gradient(135deg, #be185d, #a855f7);
-    color: #fff;
-    border: none;
-    border-radius: 50px;
-    padding: 10px 20px;
-    font-family: 'Jost', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
-    box-shadow: 0 4px 14px rgba(168,85,247,0.3);
-  }
-  #update-banner .upd-close {
-    background: none;
-    border: none;
-    font-size: 20px;
-    color: #be185d;
-    cursor: pointer;
-    line-height: 1;
-    padding: 4px;
-    opacity: 0.7;
-  }
-
-  /* ---- UPDATE DEBUG PANEL ---- */
-  #upd-debug-btn {
-    position: fixed;
-    bottom: 18px;
-    left: 64px;
-    z-index: 99998;
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.55);
-    border: 1px solid rgba(168,85,247,0.3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    font-size: 18px;
-    cursor: pointer;
-    box-shadow: 0 2px 10px rgba(168,85,247,0.15);
-    display: flex; align-items: center; justify-content: center;
-    transition: transform 0.2s;
-  }
-  #upd-debug-btn:active { transform: scale(0.9); }
-  #upd-debug-panel {
-    position: fixed;
-    bottom: 70px;
-    left: 12px;
-    z-index: 99998;
-    width: min(320px, calc(100vw - 24px));
-    background: rgba(255,255,255,0.82);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255,255,255,0.9);
-    border-radius: 20px;
-    padding: 16px;
-    box-shadow: 0 8px 32px rgba(168,85,247,0.18);
-    font-family: 'Jost', sans-serif;
-    font-size: 13px;
-    color: #3b0a1a;
-    display: none;
-  }
-  #upd-debug-panel.open { display: block; }
-  #upd-debug-panel h3 {
-    font-family: 'Playfair Display', serif;
-    font-size: 14px; font-weight: 700;
-    color: #881337; margin-bottom: 10px;
-  }
-  .upd-row {
-    display: flex; justify-content: space-between;
-    align-items: center; padding: 6px 0;
-    border-bottom: 1px solid rgba(168,85,247,0.1);
-  }
-  .upd-row:last-child { border-bottom: none; }
-  .upd-row .upd-label { color: #881337; font-weight: 500; }
-  .upd-row .upd-val   { color: #3b0a1a; text-align: right; max-width: 55%; word-break: break-all; }
-  .upd-val.ok   { color: #16a34a; font-weight: 600; }
-  .upd-val.warn { color: #d97706; font-weight: 600; }
-  .upd-val.err  { color: #dc2626; font-weight: 600; }
-  #upd-check-now {
-    margin-top: 12px; width: 100%;
-    background: linear-gradient(135deg, #be185d, #a855f7);
-    color: #fff; border: none; border-radius: 50px;
-    padding: 10px; font-family: 'Jost', sans-serif;
-    font-size: 13px; font-weight: 500; cursor: pointer;
-  }
-
-</style>
-<div id="update-banner">
-  <span class="upd-text">✨ New version available!</span>
-  <button class="upd-btn" onclick="applyUpdate()">Update now</button>
-  <button class="upd-close" onclick="dismissUpdate()">✕</button>
-</div>
-
-<!-- UPDATE DEBUG PANEL -->
-<button id="upd-debug-btn" onclick="toggleDebugPanel()" title="Update status">🔍</button>
-<div id="upd-debug-panel">
-  <h3>🔄 Auto-Update Status</h3>
-  <div class="upd-row"><span class="upd-label">Storage</span><span class="upd-val" id="dbg-storage">—</span></div>
-  <div class="upd-row"><span class="upd-label">Last checked</span><span class="upd-val" id="dbg-lastcheck">—</span></div>
-  <div class="upd-row"><span class="upd-label">Saved version</span><span class="upd-val" id="dbg-version">—</span></div>
-  <div class="upd-row"><span class="upd-label">GitHub reachable</span><span class="upd-val" id="dbg-github">—</span></div>
-  <div class="upd-row"><span class="upd-label">Update ready</span><span class="upd-val" id="dbg-pending">—</span></div>
-  <div class="upd-row"><span class="upd-label">Status</span><span class="upd-val" id="dbg-status">—</span></div>
-  <button id="upd-check-now" onclick="debugCheckNow()">Check GitHub now</button>
-</div>
-
 <script>
-(function(){
-  function toggleDebugPanel() {
-    const p = document.getElementById('upd-debug-panel');
-    p.classList.toggle('open');
-    if (p.classList.contains('open')) refreshDebugPanel();
-  }
-  window.toggleDebugPanel = toggleDebugPanel;
+/* ============================================================
+   PROPOSAL FEATURE
+   ============================================================ */
+(function() {
+  const STORAGE_KEY = 'proposal_answer_v1';
 
-  function timeAgo(ts) {
-    if (!ts || ts === "0") return 'Never';
-    const secs = Math.floor((Date.now() - parseInt(ts)) / 1000);
-    if (secs < 10)  return 'Just now';
-    if (secs < 60)  return secs + 's ago';
-    if (secs < 3600) return Math.floor(secs/60) + 'm ago';
-    return Math.floor(secs/3600) + 'h ago';
-  }
+  const askWrap        = document.getElementById('proposal-ask-wrap');
+  const answeredWrap   = document.getElementById('proposal-answered-wrap');
+  const answeredText   = document.getElementById('proposal-answered-text');
+  const answeredDate   = document.getElementById('proposal-answered-date');
+  const resetBtn       = document.getElementById('proposal-reset-btn');
 
-  function set(id, text, cls) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = text;
-    el.className = 'upd-val' + (cls ? ' ' + cls : '');
-  }
+  const ringIcon       = document.getElementById('proposal-ring-icon');
+  const yesBtnCard     = document.getElementById('proposal-yes-btn');
+  const noBtnCard      = document.getElementById('proposal-no-btn');
 
-  function refreshDebugPanel() {
-    let storageType = 'none';
-    try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); storageType = 'localStorage ✅'; }
-    catch(e) {
-      try { sessionStorage.setItem('_t','1'); sessionStorage.removeItem('_t'); storageType = 'sessionStorage ⚠️'; }
-      catch(e2) { storageType = 'in-memory ⚠️'; }
-    }
-    set('dbg-storage', storageType, storageType.includes('✅') ? 'ok' : 'warn');
+  const overlay        = document.getElementById('proposal-overlay');
+  const overlayRing    = document.getElementById('proposal-overlay-ring');
+  const overlayLetter  = document.getElementById('proposal-overlay-letter');
+  const letterTyped    = document.getElementById('proposal-letter-typed');
+  const overlayQ       = document.getElementById('proposal-overlay-question');
+  const overlayBtns    = document.getElementById('proposal-overlay-btns');
+  const overlayYesBtn  = document.getElementById('proposal-overlay-yes-btn');
+  const overlayNoBtn   = document.getElementById('proposal-overlay-no-btn');
 
-    const lc = store.get(CHECK_KEY);
-    set('dbg-lastcheck', timeAgo(lc), lc ? 'ok' : 'warn');
+  const yesOverlay     = document.getElementById('proposal-yes-overlay');
+  const yesRing        = document.getElementById('proposal-yes-ring');
+  const yesText        = document.getElementById('proposal-yes-text');
+  const yesSub         = document.getElementById('proposal-yes-sub');
+  const yesClose       = document.getElementById('proposal-yes-close');
 
-    const ver = store.get(STORE_KEY);
-    set('dbg-version', ver ? ver.slice(0,18)+'…' : 'Not set', ver ? 'ok' : 'warn');
+  const LETTER = [
+    "hii babii,from the very first moment i met you, i knew you were something extraordinary.",
+    "lahat ng araw na kasama kita lahat ng yun favorite ko like yung tawanan, your warmth, the way you make the whole world feel softer.",
+    "kahit na gaano tayo kalayo sa isa't isa babii ikaw padin papakasalan ko, ik masyado pang maaga sa ganto pero ayokong sayangin yung oras huhu.",
+    "i don't want to spend a single chapter of my life without you in it.",
+    "feel ko talaga para sayo na ako babiii — and I want that to be forever."
+  ].join(" ");
 
-    set('dbg-pending', pendingHTML ? 'Yes ✅' : 'No', pendingHTML ? 'ok' : null);
-
-    if (pendingHTML) {
-      set('dbg-status', '🎉 Update ready!', 'ok');
-    } else if (ver) {
-      set('dbg-status', 'Up to date ✅', 'ok');
+  /* ---- Init: check if already answered ---- */
+  function init() {
+    const saved = loadAnswer();
+    if (saved) {
+      showAnsweredState(saved);
     } else {
-      set('dbg-status', 'First run — no baseline yet', 'warn');
+      showAskState();
     }
-
-    set('dbg-github', 'Checking…', null);
-    fetch(GITHUB_URL + "?probe=" + Date.now(), {method:'HEAD'})
-      .then(r => set('dbg-github', r.ok ? 'Yes ✅' : 'Error '+r.status, r.ok ? 'ok' : 'err'))
-      .catch(() => set('dbg-github', 'Unreachable ❌', 'err'));
   }
 
-  window.debugCheckNow = function() {
-    set('dbg-status', 'Checking…', null);
-    set('dbg-github', 'Checking…', null);
-    store.del(CHECK_KEY);
-    const now = Date.now();
-    store.set(CHECK_KEY, now);
-    fetch(GITHUB_URL + "?nocache=" + now)
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
-      .then(html => {
-        const fp     = fingerprint(html);
-        const stored = store.get(STORE_KEY);
-        if (!stored) {
-          store.set(STORE_KEY, fp);
-          set('dbg-status', 'First run — baseline saved ✅', 'ok');
-        } else if (stored !== fp) {
-          pendingHTML = html;
-          showUpdateBanner();
-          set('dbg-status', '🎉 New version found!', 'ok');
-          set('dbg-pending', 'Yes ✅', 'ok');
-        } else {
-          set('dbg-status', 'Already up to date ✅', 'ok');
-        }
-        set('dbg-lastcheck', 'Just now', 'ok');
-        set('dbg-github', 'Yes ✅', 'ok');
-        const ver = store.get(STORE_KEY);
-        set('dbg-version', ver ? ver.slice(0,18)+'…' : '—', ver ? 'ok' : 'warn');
-      })
-      .catch(() => {
-        set('dbg-status', 'GitHub unreachable ❌', 'err');
-        set('dbg-github', 'Failed ❌', 'err');
-        store.del(CHECK_KEY);
-      });
-  };
-})();
-</script>
+  function showAskState() {
+    askWrap.style.display = 'block';
+    answeredWrap.style.display = 'none';
+  }
 
-<!-- SETTINGS PANEL -->
-<button id="settings-btn" onclick="toggleSettings()" title="Settings">⚙️</button>
-<div id="settings-panel">
-  <h3>⚙️ Settings</h3>
-  <div class="setting-row">
-    <span class="setting-label"><span class="s-icon">🎵</span> Background music</span>
-    <label class="toggle-wrap">
-      <input type="checkbox" id="music-toggle" onchange="onMusicToggle(this.checked)" checked>
-      <span class="toggle-track"></span>
-    </label>
-  </div>
-</div>
-
-<script>
-(function(){
-  const MUSIC_KEY = 'lovetree_music';
-
-  // Restore saved preference
-  window.addEventListener('load', function() {
-    const saved = store.get(MUSIC_KEY);
-    const toggle = document.getElementById('music-toggle');
-    if (saved === 'off') {
-      toggle.checked = false;
-      // Music starts on tap-overlay open; we intercept that via the flag
-      window._musicEnabled = false;
+  function showAnsweredState(saved) {
+    askWrap.style.display = 'none';
+    answeredWrap.style.display = 'flex';
+    if (saved.answer === 'yes') {
+      answeredText.textContent = '💍 You said yes! Forever begins now.';
     } else {
-      toggle.checked = true;
-      window._musicEnabled = true;
+      answeredText.textContent = '…waiting for the right moment 🌹';
     }
-  });
-
-  window.onMusicToggle = function(checked) {
-    window._musicEnabled = checked;
-    store.set(MUSIC_KEY, checked ? 'on' : 'off');
-    const audio = document.getElementById('bg-music');
-    if (!audio) return;
-    if (checked) {
-      audio.play().catch(()=>{});
-    } else {
-      audio.pause();
-    }
-  };
-
-  window.toggleSettings = function() {
-    const panel = document.getElementById('settings-panel');
-    const isOpen = panel.classList.contains('open');
-    if (isOpen) {
-      panel.style.opacity = '0';
-      panel.style.transform = 'translateY(10px)';
-      setTimeout(() => panel.classList.remove('open'), 250);
-    } else {
-      panel.classList.add('open');
-      requestAnimationFrame(() => {
-        panel.style.opacity = '1';
-        panel.style.transform = 'translateY(0)';
-      });
-    }
-  };
-
-  // Close settings when tapping outside
-  document.addEventListener('click', function(e) {
-    const panel = document.getElementById('settings-panel');
-    const btn   = document.getElementById('settings-btn');
-    if (panel.classList.contains('open') && !panel.contains(e.target) && e.target !== btn) {
-      window.toggleSettings();
-    }
-  });
-})();
-</script>
-
-<!-- ── VISUAL EFFECTS ── -->
-<canvas id="fx-canvas" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9998;"></canvas>
-<div id="glitter-layer" style="position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;"></div>
-
-<script>
-(function(){
-  // ── PETAL CANVAS (fixed, full screen) ──
-  const petalCanvas = document.getElementById('fx-canvas');
-  const pctx = petalCanvas.getContext('2d');
-
-  // ── BUTTERFLY CANVAS (inside tree, scrolls naturally) ──
-  const bfCanvas = document.getElementById('bf-canvas');
-  const bctx = bfCanvas.getContext('2d');
-
-  let W, H, dpr, BW, BH, bdpr;
-
-  function resizePetal(){
-    dpr = Math.min(devicePixelRatio||1,2);
-    W = window.innerWidth; H = window.innerHeight;
-    petalCanvas.width = W*dpr; petalCanvas.height = H*dpr;
-    pctx.setTransform(dpr,0,0,dpr,0,0);
+    answeredDate.textContent = saved.date ? 'answered on ' + saved.date : '';
   }
 
-  function resizeBf(){
-    bdpr = Math.min(devicePixelRatio||1,2);
-    BW = bfCanvas.offsetWidth; BH = bfCanvas.offsetHeight;
-    bfCanvas.width = BW*bdpr; bfCanvas.height = BH*bdpr;
-    bctx.setTransform(bdpr,0,0,bdpr,0,0);
+  /* ---- Storage helpers ---- */
+  function saveAnswer(ans) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const obj = { answer: ans, date: dateStr };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); } catch(e) {}
+    return obj;
   }
 
-  window.addEventListener('resize', ()=>{ resizePetal(); resizeBf(); });
-  resizePetal();
-  setTimeout(resizeBf, 800);
-
-  /* ── CHERRY BLOSSOMS (petal canvas, fixed coords) ── */
-  function getTreeViewRect(){
-    const el = document.getElementById('tree-section-el');
-    return el ? el.getBoundingClientRect() : {left:0,top:0,width:300,height:300};
+  function loadAnswer() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
   }
 
-  const PETAL_COLORS = ['#fda4af','#f9a8d4','#fbcfe8','#f472b6','#fce7f3','#fecdd3'];
-  const PETAL_COUNT = window.innerWidth < 600 ? 20 : 35;
-
-  function randPetal(fromTop){
-    const r = getTreeViewRect();
-    return {
-      x: r.left + Math.random()*r.width,
-      y: fromTop ? r.top - 10 - Math.random()*40 : r.top + Math.random()*r.height,
-      r: 4 + Math.random()*5,
-      color: PETAL_COLORS[Math.floor(Math.random()*PETAL_COLORS.length)],
-      speedY: 0.6 + Math.random()*1.0,
-      speedX: (Math.random()-0.5)*0.6,
-      rot: Math.random()*Math.PI*2,
-      rotSpeed: (Math.random()-0.5)*0.04,
-      sway: Math.random()*Math.PI*2,
-      swaySpeed: 0.008 + Math.random()*0.012,
-      opacity: 0.55 + Math.random()*0.45,
-    };
-  }
-  const petals = Array.from({length:PETAL_COUNT}, ()=>randPetal(false));
-
-  function drawPetal(ctx, p){
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(p.rot);
-    ctx.globalAlpha = p.opacity;
-    ctx.beginPath();
-    ctx.ellipse(0,0,p.r,p.r*0.55,0,0,Math.PI*2);
-    ctx.fillStyle = p.color;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur = 4;
-    ctx.fill();
-    ctx.restore();
+  function clearAnswer() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
   }
 
-  /* ── BUTTERFLIES (bf canvas, local coords 0..BW, 0..BH) ── */
-  const BUTTERFLY_COUNT = window.innerWidth < 600 ? 7 : 12;
-  const BF_COLORS = [
-    ['#f9a8d4','#c084fc'], ['#fda4af','#f472b6'],
-    ['#c084fc','#818cf8'], ['#fbcfe8','#f9a8d4'],
-    ['#a5f3fc','#c084fc'],
-  ];
+  /* ---- Open proposal overlay with cinematic sequence ---- */
+  function openOverlay() {
+    overlay.style.opacity = '0';
+    overlay.style.display = 'flex';
+    overlay.classList.add('open');
+    overlayRing.style.animation = 'none';
+    overlayLetter.style.opacity = '0';
+    overlayLetter.style.transform = 'translateY(20px)';
+    overlayQ.style.opacity = '0';
+    overlayQ.style.transform = 'translateY(10px)';
+    overlayBtns.style.opacity = '0';
+    overlayBtns.style.transform = 'translateY(10px)';
+    letterTyped.textContent = '';
 
-  function randBf(){
-    const col = BF_COLORS[Math.floor(Math.random()*BF_COLORS.length)];
-    const bw = bfCanvas.offsetWidth || 300;
-    const bh = bfCanvas.offsetHeight || 300;
-    return {
-      x: bw*(0.3 + Math.random()*0.4),
-      y: bh*(0.2 + Math.random()*0.5),
-      targetX: bw*Math.random(),
-      targetY: bh*Math.random(),
-      speed: 0.18 + Math.random()*0.22,
-      wingPhase: Math.random()*Math.PI*2,
-      wingSpeed: 0.03 + Math.random()*0.025,
-      size: 3 + Math.random()*3,
-      col,
-      waitTime: Math.random()*80,
-    };
-  }
-  const butterflies = Array.from({length:BUTTERFLY_COUNT}, randBf);
+    // Fade in overlay bg
+    overlay.animate([{opacity:0},{opacity:1}], {duration:500,fill:'forwards'});
 
-  function drawButterfly(ctx, b){
-    const wingOpen = Math.abs(Math.sin(b.wingPhase));
-    const bodyLen = b.size * 1.2;
-    const wW = b.size * 1.4 * wingOpen;
-    const wH = b.size * 0.9;
-    const wW2 = b.size * 0.9 * wingOpen;
-    const wH2 = b.size * 0.6;
+    // Ring pops in after 300ms
+    setTimeout(() => {
+      overlayRing.style.animation = 'ringPop 0.9s cubic-bezier(0.34,1.56,0.64,1) forwards';
+    }, 300);
 
-    ctx.save();
-    ctx.translate(b.x, b.y);
-    ctx.rotate(Math.sin(b.wingPhase * 0.3) * 0.18);
-    ctx.globalAlpha = 0.88;
-
-    // Upper left wing
-    ctx.beginPath();
-    ctx.moveTo(0,-bodyLen*0.2);
-    ctx.bezierCurveTo(-wW*0.3,-wH*1.1,-wW*1.1,-wH*0.7,-wW,wH*0.15);
-    ctx.bezierCurveTo(-wW*0.6,wH*0.4,-wW*0.1,wH*0.1,0,-bodyLen*0.2);
-    const gUL = ctx.createRadialGradient(-wW*0.4,-wH*0.3,0,-wW*0.4,-wH*0.3,wW*0.9);
-    gUL.addColorStop(0,b.col[0]+'ee'); gUL.addColorStop(0.5,b.col[1]+'bb'); gUL.addColorStop(1,b.col[0]+'44');
-    ctx.fillStyle=gUL; ctx.fill();
-
-    // Upper right wing
-    ctx.beginPath();
-    ctx.moveTo(0,-bodyLen*0.2);
-    ctx.bezierCurveTo(wW*0.3,-wH*1.1,wW*1.1,-wH*0.7,wW,wH*0.15);
-    ctx.bezierCurveTo(wW*0.6,wH*0.4,wW*0.1,wH*0.1,0,-bodyLen*0.2);
-    const gUR = ctx.createRadialGradient(wW*0.4,-wH*0.3,0,wW*0.4,-wH*0.3,wW*0.9);
-    gUR.addColorStop(0,b.col[0]+'ee'); gUR.addColorStop(0.5,b.col[1]+'bb'); gUR.addColorStop(1,b.col[0]+'44');
-    ctx.fillStyle=gUR; ctx.fill();
-
-    // Lower left wing
-    ctx.beginPath();
-    ctx.moveTo(0,bodyLen*0.1);
-    ctx.bezierCurveTo(-wW2*0.8,bodyLen*0.05,-wW2*1.1,wH2*1.2,-wW2*0.4,wH2*1.5);
-    ctx.bezierCurveTo(-wW2*0.1,wH2*1.6,0,wH2*0.8,0,bodyLen*0.1);
-    const gLL = ctx.createRadialGradient(-wW2*0.4,wH2*0.8,0,-wW2*0.4,wH2*0.8,wW2);
-    gLL.addColorStop(0,b.col[1]+'cc'); gLL.addColorStop(1,b.col[0]+'33');
-    ctx.fillStyle=gLL; ctx.fill();
-
-    // Lower right wing
-    ctx.beginPath();
-    ctx.moveTo(0,bodyLen*0.1);
-    ctx.bezierCurveTo(wW2*0.8,bodyLen*0.05,wW2*1.1,wH2*1.2,wW2*0.4,wH2*1.5);
-    ctx.bezierCurveTo(wW2*0.1,wH2*1.6,0,wH2*0.8,0,bodyLen*0.1);
-    const gLR = ctx.createRadialGradient(wW2*0.4,wH2*0.8,0,wW2*0.4,wH2*0.8,wW2);
-    gLR.addColorStop(0,b.col[1]+'cc'); gLR.addColorStop(1,b.col[0]+'33');
-    ctx.fillStyle=gLR; ctx.fill();
-
-    // Body
-    ctx.beginPath();
-    ctx.ellipse(0,bodyLen*0.05,2.2,bodyLen*0.55,0,0,Math.PI*2);
-    ctx.fillStyle='#881337'; ctx.shadowBlur=0; ctx.fill();
-
-    // Head
-    ctx.beginPath(); ctx.arc(0,-bodyLen*0.52,2,0,Math.PI*2);
-    ctx.fillStyle='#3b0a1a'; ctx.fill();
-
-    // Antennae
-    ctx.strokeStyle='#3b0a1a'; ctx.lineWidth=0.7;
-    ctx.beginPath(); ctx.moveTo(0,-bodyLen*0.52);
-    ctx.quadraticCurveTo(-b.size*0.4,-bodyLen*0.9,-b.size*0.5,-bodyLen*1.05); ctx.stroke();
-    ctx.beginPath(); ctx.arc(-b.size*0.5,-bodyLen*1.07,1,0,Math.PI*2);
-    ctx.fillStyle='#3b0a1a'; ctx.fill();
-    ctx.beginPath(); ctx.moveTo(0,-bodyLen*0.52);
-    ctx.quadraticCurveTo(b.size*0.4,-bodyLen*0.9,b.size*0.5,-bodyLen*1.05); ctx.stroke();
-    ctx.beginPath(); ctx.arc(b.size*0.5,-bodyLen*1.07,1,0,Math.PI*2);
-    ctx.fill();
-
-    ctx.restore();
+    // Letter slides in after 800ms, then type the text
+    setTimeout(() => {
+      overlayLetter.style.animation = 'letterSlideIn 0.6s ease forwards';
+      setTimeout(() => typeLetterText(LETTER, () => {
+        // After typing, show question
+        overlayQ.style.animation = 'questionFade 0.7s ease 0.1s forwards';
+        overlayBtns.style.animation = 'btnsFade 0.7s ease 0.4s forwards';
+      }), 100);
+    }, 1000);
   }
 
-  /* ── MAIN LOOP ── */
-  let butterfliesReady = false;
-  setTimeout(()=>{ butterfliesReady=true; resizeBf(); }, 3200);
-
-  function loop(){
-    requestAnimationFrame(loop);
-
-    // Petals on fixed canvas
-    pctx.clearRect(0,0,W,H);
-    const r = getTreeViewRect();
-    const tBottom = r.top + r.height;
-    for(const p of petals){
-      p.sway += p.swaySpeed;
-      p.x += p.speedX + Math.sin(p.sway)*0.5;
-      p.y += p.speedY;
-      p.rot += p.rotSpeed;
-      if(p.y > tBottom+20) Object.assign(p, randPetal(true));
-      drawPetal(pctx, p);
-    }
-
-    // Butterflies on local canvas inside tree
-    if(!butterfliesReady) return;
-    const bw = bfCanvas.offsetWidth || 300;
-    const bh = bfCanvas.offsetHeight || 300;
-    const pad = 20;
-    bctx.clearRect(0,0,bw,bh);
-
-    for(const b of butterflies){
-      if(b.waitTime>0){ b.waitTime--; }
-      const dx=b.targetX-b.x, dy=b.targetY-b.y;
-      const dist=Math.hypot(dx,dy);
-      if(dist<8){
-        b.targetX=pad+Math.random()*(bw-pad*2);
-        b.targetY=pad+Math.random()*(bh-pad*2);
-        b.waitTime=40+Math.random()*80;
+  function typeLetterText(text, onDone) {
+    let i = 0;
+    const delay = 22;
+    function tick() {
+      if (i < text.length) {
+        letterTyped.textContent += text[i++];
+        setTimeout(tick, delay);
       } else {
-        b.x+=(dx/dist)*b.speed;
-        b.y+=(dy/dist)*b.speed;
+        if (onDone) onDone();
       }
-      b.x=Math.max(pad,Math.min(bw-pad,b.x));
-      b.y=Math.max(pad,Math.min(bh-pad,b.y));
-      b.wingPhase+=b.wingSpeed;
-      drawButterfly(bctx, b);
+    }
+    tick();
+  }
+
+  function closeOverlay() {
+    overlay.animate([{opacity:1},{opacity:0}], {duration:350,fill:'forwards'}).onfinish = () => {
+      overlay.style.display = 'none';
+      overlay.classList.remove('open');
+      overlay.style.opacity = '';
+    };
+  }
+
+  /* ---- Yes celebration ---- */
+  function showYesCelebration() {
+    yesOverlay.style.display = 'flex';
+    yesOverlay.classList.add('show');
+    yesOverlay.style.opacity = '0';
+    yesRing.style.opacity = '0';
+    yesText.style.opacity = '0';
+    yesSub.style.opacity = '0';
+    yesClose.style.opacity = '0';
+
+    yesText.textContent = 'You said yes! 💍';
+    yesSub.textContent = 'Forever & always, together ✨';
+
+    yesOverlay.animate([{opacity:0},{opacity:1}], {duration:500,fill:'forwards'});
+
+    setTimeout(() => {
+      yesRing.style.animation = 'yesRingPop 1.1s cubic-bezier(0.34,1.56,0.64,1) forwards';
+    }, 200);
+    setTimeout(() => {
+      yesText.style.animation = 'yesTextPop 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards';
+    }, 900);
+    setTimeout(() => {
+      yesSub.style.animation = 'yesSubFade 0.8s ease 0.2s forwards';
+    }, 1200);
+    setTimeout(() => {
+      yesClose.style.animation = 'yesCloseFade 0.6s ease forwards';
+    }, 1800);
+
+    // Shower petals
+    for (let p = 0; p < 30; p++) {
+      setTimeout(() => spawnProposalPetal(), p * 120);
     }
   }
-  requestAnimationFrame(loop);
 
-  /* ── GLITTER / SPARKLE ON TAP ── */
-  const glitterLayer = document.getElementById('glitter-layer');
-  const GLITTER_COLORS = ['#f472b6','#a855f7','#fda4af','#c084fc','#fb7185','#fbbf24','#fff','#f9a8d4'];
+  function spawnProposalPetal() {
+    const petals = ['🌸','💗','✨','🌹','💍','💕','🌷'];
+    const el = document.createElement('div');
+    el.textContent = petals[Math.floor(Math.random() * petals.length)];
+    el.style.cssText = `
+      position:fixed; top:-40px; font-size:${16+Math.random()*18}px;
+      left:${Math.random()*100}vw; pointer-events:none; z-index:970;
+      --drift:${(Math.random()-0.5)*200}px;
+      --spin:${(Math.random()-0.5)*720}deg;
+      animation: fall ${3+Math.random()*3}s linear forwards;
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 7000);
+  }
 
-  function spawnGlitter(x, y){
-    const count = 18;
-    for(let i=0;i<count;i++){
-      const el = document.createElement('div');
-      const angle = (Math.PI*2/count)*i + (Math.random()-0.5)*0.5;
-      const dist = 30 + Math.random()*55;
-      const size = 4 + Math.random()*6;
-      const color = GLITTER_COLORS[Math.floor(Math.random()*GLITTER_COLORS.length)];
-      const dur = 500 + Math.random()*400;
-      const tx = Math.cos(angle)*dist;
-      const ty = Math.sin(angle)*dist;
-      el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:${size}px;height:${size}px;border-radius:50%;background:${color};box-shadow:0 0 ${size*2}px ${color};pointer-events:none;transform:translate(-50%,-50%);animation:glitter-fly ${dur}ms ease-out forwards;--tx:${tx}px;--ty:${ty}px;`;
-      glitterLayer.appendChild(el);
-      setTimeout(()=>el.remove(), dur+50);
+  /* ---- Event listeners ---- */
+  // Ring (and the whole card question area) opens overlay
+  ringIcon.addEventListener('click', openOverlay);
+  ringIcon.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') openOverlay(); });
+
+  // Also let tapping the question text open the overlay
+  document.querySelector('.proposal-question') && document.querySelector('.proposal-question').addEventListener('click', openOverlay);
+  document.querySelector('.proposal-sub') && document.querySelector('.proposal-sub').addEventListener('click', openOverlay);
+
+  // Overlay YES button
+  overlayYesBtn.addEventListener('click', () => {
+    closeOverlay();
+    setTimeout(handleYes, 400);
+  });
+
+  // Guilt-trip question chain when she taps "not yet"
+  const guiltyQuestions = [
+    { q: "are you sure? ☹️",                              yes: "yes, sure…",        no: "wait no—"       },
+    { q: "but… you love me right? 🥺",                    yes: "of course i do!",   no: "i mean…"        },
+    { q: "so… is that a yes then? 💍",                    yes: "okay fine YES 💍",   no: "not exactly…"   },
+    { q: "not even a little yes? 🌹",                     yes: "maybe a little 💗",  no: "ugh fine"       },
+    { q: "okay but pretty please? 🥺",                    yes: "FINE YES 💍💍",       no: "still no"       },
+  ];
+  let guiltyStep = 0;
+
+  function showGuiltyQuestion(step) {
+    const data = guiltyQuestions[Math.min(step, guiltyQuestions.length - 1)];
+
+    // Animate question swap — slide out up, slide in from below
+    overlayQ.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+    overlayQ.style.opacity = '0';
+    overlayQ.style.transform = 'translateY(-8px)';
+
+    setTimeout(() => {
+      overlayQ.textContent = data.q;
+      overlayQ.style.transform = 'translateY(8px)';
+      setTimeout(() => {
+        overlayQ.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        overlayQ.style.opacity = '1';
+        overlayQ.style.transform = 'translateY(0)';
+      }, 50);
+    }, 220);
+
+    // Swap button labels + grow Yes, shrink No
+    setTimeout(() => {
+      overlayYesBtn.textContent = data.yes;
+      overlayNoBtn.textContent  = data.no;
+      overlayYesBtn.style.transition = 'transform 0.3s ease';
+      overlayYesBtn.style.transform  = `scale(${1 + step * 0.06})`;
+      overlayNoBtn.style.transition  = 'transform 0.3s ease, opacity 0.3s ease';
+      overlayNoBtn.style.transform   = `scale(${Math.max(0.6, 1 - step * 0.1)})`;
+      overlayNoBtn.style.opacity     = Math.max(0.3, 1 - step * 0.14);
+    }, 250);
+  }
+
+  overlayNoBtn.addEventListener('click', () => {
+    guiltyStep++;
+    if (guiltyStep >= guiltyQuestions.length) {
+      // She's been stubborn enough — the button surrenders 😂
+      overlayNoBtn.textContent = 'okay… YES 💍';
+      overlayNoBtn.disabled = true;
+      setTimeout(() => {
+        closeOverlay();
+        setTimeout(handleYes, 400);
+      }, 700);
+      return;
     }
+    showGuiltyQuestion(guiltyStep);
+  });
+
+  // Close overlay on background click (but not anymore — they must answer!)
+  // overlay.addEventListener('click', e => { ... }); // disabled — no escape!
+
+  // Yes close button
+  yesClose.addEventListener('click', () => {
+    yesOverlay.animate([{opacity:1},{opacity:0}], {duration:400,fill:'forwards'}).onfinish = () => {
+      yesOverlay.style.display = 'none';
+      yesOverlay.classList.remove('show');
+    };
+  });
+
+  yesOverlay.addEventListener('click', e => {
+    if (e.target === yesOverlay || e.target.classList.contains('proposal-yes-bg')) {
+      yesClose.click();
+    }
+  });
+
+
+  // Reset button
+  resetBtn.addEventListener('click', () => {
+    clearAnswer();
+    guiltyStep = 0;
+    showAskState();
+  });
+
+  function handleYes() {
+    const saved = saveAnswer('yes');
+    showAnsweredState(saved);
+    showYesCelebration();
   }
 
-  if(!document.getElementById('glitter-style')){
-    const s = document.createElement('style');
-    s.id = 'glitter-style';
-    s.textContent = `@keyframes glitter-fly{0%{transform:translate(-50%,-50%) scale(1);opacity:1;}100%{transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(0);opacity:0;}}`;
-    document.head.appendChild(s);
+  init();
+})();
+</script>
+
+<!-- HTML5 AUDIO PLAYER -->
+<audio id="bg-music" loop preload="auto">
+  <source src="music.mp3" type="audio/mpeg">
+</audio>
+
+<!-- MUSIC BUTTON -->
+<div id="music-hint" style="
+  position:fixed;bottom:1.5rem;right:1.5rem;
+  z-index:99999;
+  width:48px;height:48px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.25);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,0.5);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;
+  cursor:pointer;
+  box-shadow:0 4px 16px rgba(168,85,247,0.3);
+  animation: musicPulse 2s ease-in-out infinite;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+">🎵</div>
+
+<style>
+@keyframes musicPulse {
+  0%,100%{ transform:scale(1); box-shadow:0 4px 16px rgba(168,85,247,0.3); }
+  50%{ transform:scale(1.13); box-shadow:0 6px 28px rgba(168,85,247,0.55); }
+}
+</style>
+
+<script>
+(function(){
+  const hint  = document.getElementById('music-hint');
+  const audio = document.getElementById('bg-music');
+  let played  = false;
+
+  function play(){
+    if(played) return;
+    played = true;
+    audio.play().then(function(){
+      hint.textContent = '🎶';
+      hint.style.animation = 'none';
+    }).catch(function(){
+      played = false; // retry allowed if failed
+    });
   }
 
-  document.addEventListener('click', e => spawnGlitter(e.clientX, e.clientY));
-  document.addEventListener('touchstart', e => {
-    for(const t of e.touches) spawnGlitter(t.clientX, t.clientY);
-  }, {passive:true});
-
+  document.addEventListener('touchend', function onT(){ play(); document.removeEventListener('touchend', onT); });
+  document.addEventListener('click',    function onC(){ play(); document.removeEventListener('click', onC); });
+  hint.addEventListener('touchend', function(e){ e.stopPropagation(); play(); });
+  hint.addEventListener('click',    function(e){ e.stopPropagation(); play(); });
 })();
 </script>
 </body>
