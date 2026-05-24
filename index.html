@@ -4612,299 +4612,303 @@ pulseBtn.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') ope
 })();
 </script>
 
-<script>
+<!-- Firebase SDKs -->
+<script type="module">
 /* ============================================================
-   PROPOSAL FEATURE
+   PROPOSAL FEATURE — Firebase Realtime Database sync
+   Her phone  → "You said yes! 💍"
+   Max's phone → "She said yes! 💍"  (add ?view=max to the URL)
    ============================================================ */
-(function() {
-  const STORAGE_KEY = 'proposal_answer_v1';
 
-  const askWrap        = document.getElementById('proposal-ask-wrap');
-  const answeredWrap   = document.getElementById('proposal-answered-wrap');
-  const answeredText   = document.getElementById('proposal-answered-text');
-  const answeredDate   = document.getElementById('proposal-answered-date');
-  const resetBtn       = document.getElementById('proposal-reset-btn');
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  const ringIcon       = document.getElementById('proposal-ring-icon');
-  const yesBtnCard     = document.getElementById('proposal-yes-btn');
-  const noBtnCard      = document.getElementById('proposal-no-btn');
+const firebaseConfig = {
+  apiKey: "AIzaSyAdDaDLbN2Gq21SG7robfo4xi0yK_xB554",
+  authDomain: "love-tree-93466.firebaseapp.com",
+  databaseURL: "https://love-tree-93466-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  projectId: "love-tree-93466",
+  storageBucket: "love-tree-93466.firebasestorage.app",
+  messagingSenderId: "689909933969",
+  appId: "1:689909933969:web:2f11d2ca51de25b0a51c30",
+  measurementId: "G-JYKYXCBYXB"
+};
 
-  const overlay        = document.getElementById('proposal-overlay');
-  const overlayRing    = document.getElementById('proposal-overlay-ring');
-  const overlayLetter  = document.getElementById('proposal-overlay-letter');
-  const letterTyped    = document.getElementById('proposal-letter-typed');
-  const overlayQ       = document.getElementById('proposal-overlay-question');
-  const overlayBtns    = document.getElementById('proposal-overlay-btns');
-  const overlayYesBtn  = document.getElementById('proposal-overlay-yes-btn');
-  const overlayNoBtn   = document.getElementById('proposal-overlay-no-btn');
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+const proposalRef = ref(db, 'proposal/answer');
 
-  const yesOverlay     = document.getElementById('proposal-yes-overlay');
-  const yesRing        = document.getElementById('proposal-yes-ring');
-  const yesText        = document.getElementById('proposal-yes-text');
-  const yesSub         = document.getElementById('proposal-yes-sub');
-  const yesClose       = document.getElementById('proposal-yes-close');
+// Am I Max (proposer) or her (receiver)?
+// Her link: normal URL  →  isMax = false
+// Max's link: URL + ?view=max  →  isMax = true
+const isMax = new URLSearchParams(window.location.search).get('view') === 'max';
 
-  const LETTER = [
-    "hii babii,from the very first moment i met you, i knew you were something extraordinary.",
-    "lahat ng araw na kasama kita lahat ng yun favorite ko like yung tawanan, your warmth, the way you make the whole world feel softer.",
-    "kahit na gaano tayo kalayo sa isa't isa babii ikaw padin papakasalan ko, ik masyado pang maaga sa ganto pero ayokong sayangin yung oras huhu.",
-    "i don't want to spend a single chapter of my life without you in it.",
-    "feel ko talaga para sayo na ako babiii — and I want that to be forever."
-  ].join(" ");
+const askWrap      = document.getElementById('proposal-ask-wrap');
+const answeredWrap = document.getElementById('proposal-answered-wrap');
+const answeredText = document.getElementById('proposal-answered-text');
+const answeredDate = document.getElementById('proposal-answered-date');
+const resetBtn     = document.getElementById('proposal-reset-btn');
 
-  /* ---- Init: check if already answered ---- */
-  function init() {
-    const saved = loadAnswer();
-    if (saved) {
-      showAnsweredState(saved);
-    } else {
-      showAskState();
+const ringIcon     = document.getElementById('proposal-ring-icon');
+const overlay      = document.getElementById('proposal-overlay');
+const overlayRing  = document.getElementById('proposal-overlay-ring');
+const overlayLetter= document.getElementById('proposal-overlay-letter');
+const letterTyped  = document.getElementById('proposal-letter-typed');
+const overlayQ     = document.getElementById('proposal-overlay-question');
+const overlayBtns  = document.getElementById('proposal-overlay-btns');
+const overlayYesBtn= document.getElementById('proposal-overlay-yes-btn');
+const overlayNoBtn = document.getElementById('proposal-overlay-no-btn');
+
+const yesOverlay   = document.getElementById('proposal-yes-overlay');
+const yesRing      = document.getElementById('proposal-yes-ring');
+const yesText      = document.getElementById('proposal-yes-text');
+const yesSub       = document.getElementById('proposal-yes-sub');
+const yesClose     = document.getElementById('proposal-yes-close');
+
+const LETTER = [
+  "hii babii,from the very first moment i met you, i knew you were something extraordinary.",
+  "lahat ng araw na kasama kita lahat ng yun favorite ko like yung tawanan, your warmth, the way you make the whole world feel softer.",
+  "kahit na gaano tayo kalayo sa isa't isa babii ikaw padin papakasalan ko, ik masyado pang maaga sa ganto pero ayokong sayangin yung oras huhu.",
+  "i don't want to spend a single chapter of my life without you in it.",
+  "feel ko talaga para sayo na ako babiii — and I want that to be forever."
+].join(" ");
+
+/* ---- Show / hide states ---- */
+function showAskState() {
+  askWrap.style.display    = 'block';
+  answeredWrap.style.display = 'none';
+}
+
+function showAnsweredState(data) {
+  askWrap.style.display      = 'none';
+  answeredWrap.style.display = 'flex';
+
+  if (data.answer === 'yes') {
+    // Different message depending on who's viewing
+    answeredText.textContent = isMax
+      ? '💍 She said yes! Forever begins now.'
+      : '💍 You said yes! Forever begins now.';
+  } else {
+    answeredText.textContent = '…waiting for the right moment 🌹';
+  }
+  answeredDate.textContent = data.date ? 'answered on ' + data.date : '';
+}
+
+/* ---- Firebase: listen for changes in real-time ---- */
+let alreadyCelebrated = false;
+
+onValue(proposalRef, (snapshot) => {
+  const data = snapshot.val();
+  if (data && data.answer === 'yes') {
+    showAnsweredState(data);
+    // If Max's phone is open and she just said yes — show HIS celebration
+    if (isMax && !alreadyCelebrated) {
+      alreadyCelebrated = true;
+      showYesCelebration(true); // true = max's POV
     }
-  }
-
-  function showAskState() {
-    askWrap.style.display = 'block';
-    answeredWrap.style.display = 'none';
-  }
-
-  function showAnsweredState(saved) {
-    askWrap.style.display = 'none';
-    answeredWrap.style.display = 'flex';
-    if (saved.answer === 'yes') {
-      answeredText.textContent = '💍 You said yes! Forever begins now.';
-    } else {
-      answeredText.textContent = '…waiting for the right moment 🌹';
-    }
-    answeredDate.textContent = saved.date ? 'answered on ' + saved.date : '';
-  }
-
-  /* ---- Storage helpers ---- */
-  function saveAnswer(ans) {
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    const obj = { answer: ans, date: dateStr };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); } catch(e) {}
-    return obj;
-  }
-
-  function loadAnswer() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch(e) { return null; }
-  }
-
-  function clearAnswer() {
-    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
-  }
-
-  /* ---- Open proposal overlay with cinematic sequence ---- */
-  function openOverlay() {
-    overlay.style.opacity = '0';
-    overlay.style.display = 'flex';
-    overlay.classList.add('open');
-    overlayRing.style.animation = 'none';
-    overlayLetter.style.opacity = '0';
-    overlayLetter.style.transform = 'translateY(20px)';
-    overlayQ.style.opacity = '0';
-    overlayQ.style.transform = 'translateY(10px)';
-    overlayBtns.style.opacity = '0';
-    overlayBtns.style.transform = 'translateY(10px)';
-    letterTyped.textContent = '';
-
-    // Fade in overlay bg
-    overlay.animate([{opacity:0},{opacity:1}], {duration:500,fill:'forwards'});
-
-    // Ring pops in after 300ms
-    setTimeout(() => {
-      overlayRing.style.animation = 'ringPop 0.9s cubic-bezier(0.34,1.56,0.64,1) forwards';
-    }, 300);
-
-    // Letter slides in after 800ms, then type the text
-    setTimeout(() => {
-      overlayLetter.style.animation = 'letterSlideIn 0.6s ease forwards';
-      setTimeout(() => typeLetterText(LETTER, () => {
-        // After typing, show question
-        overlayQ.style.animation = 'questionFade 0.7s ease 0.1s forwards';
-        overlayBtns.style.animation = 'btnsFade 0.7s ease 0.4s forwards';
-      }), 100);
-    }, 1000);
-  }
-
-  function typeLetterText(text, onDone) {
-    let i = 0;
-    const delay = 22;
-    function tick() {
-      if (i < text.length) {
-        letterTyped.textContent += text[i++];
-        setTimeout(tick, delay);
-      } else {
-        if (onDone) onDone();
-      }
-    }
-    tick();
-  }
-
-  function closeOverlay() {
-    overlay.animate([{opacity:1},{opacity:0}], {duration:350,fill:'forwards'}).onfinish = () => {
-      overlay.style.display = 'none';
-      overlay.classList.remove('open');
-      overlay.style.opacity = '';
-    };
-  }
-
-  /* ---- Yes celebration ---- */
-  function showYesCelebration() {
-    yesOverlay.style.display = 'flex';
-    yesOverlay.classList.add('show');
-    yesOverlay.style.opacity = '0';
-    yesRing.style.opacity = '0';
-    yesText.style.opacity = '0';
-    yesSub.style.opacity = '0';
-    yesClose.style.opacity = '0';
-
-    yesText.textContent = 'You said yes! 💍';
-    yesSub.textContent = 'Forever & always, together ✨';
-
-    yesOverlay.animate([{opacity:0},{opacity:1}], {duration:500,fill:'forwards'});
-
-    setTimeout(() => {
-      yesRing.style.animation = 'yesRingPop 1.1s cubic-bezier(0.34,1.56,0.64,1) forwards';
-    }, 200);
-    setTimeout(() => {
-      yesText.style.animation = 'yesTextPop 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards';
-    }, 900);
-    setTimeout(() => {
-      yesSub.style.animation = 'yesSubFade 0.8s ease 0.2s forwards';
-    }, 1200);
-    setTimeout(() => {
-      yesClose.style.animation = 'yesCloseFade 0.6s ease forwards';
-    }, 1800);
-
-    // Shower petals
-    for (let p = 0; p < 30; p++) {
-      setTimeout(() => spawnProposalPetal(), p * 120);
-    }
-  }
-
-  function spawnProposalPetal() {
-    const petals = ['🌸','💗','✨','🌹','💍','💕','🌷'];
-    const el = document.createElement('div');
-    el.textContent = petals[Math.floor(Math.random() * petals.length)];
-    el.style.cssText = `
-      position:fixed; top:-40px; font-size:${16+Math.random()*18}px;
-      left:${Math.random()*100}vw; pointer-events:none; z-index:970;
-      --drift:${(Math.random()-0.5)*200}px;
-      --spin:${(Math.random()-0.5)*720}deg;
-      animation: fall ${3+Math.random()*3}s linear forwards;
-    `;
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 7000);
-  }
-
-  /* ---- Event listeners ---- */
-  // Ring (and the whole card question area) opens overlay
-  ringIcon.addEventListener('click', openOverlay);
-  ringIcon.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') openOverlay(); });
-
-  // Also let tapping the question text open the overlay
-  document.querySelector('.proposal-question') && document.querySelector('.proposal-question').addEventListener('click', openOverlay);
-  document.querySelector('.proposal-sub') && document.querySelector('.proposal-sub').addEventListener('click', openOverlay);
-
-  // Overlay YES button
-  overlayYesBtn.addEventListener('click', () => {
-    closeOverlay();
-    setTimeout(handleYes, 400);
-  });
-
-  // Guilt-trip question chain when she taps "not yet"
-  const guiltyQuestions = [
-    { q: "are you sure? ☹️",                              yes: "yes, sure…",        no: "wait no—"       },
-    { q: "but… you love me right? 🥺",                    yes: "of course i do!",   no: "i mean…"        },
-    { q: "so… is that a yes then? 💍",                    yes: "okay fine YES 💍",   no: "not exactly…"   },
-    { q: "not even a little yes? 🌹",                     yes: "maybe a little 💗",  no: "ugh fine"       },
-    { q: "okay but pretty please? 🥺",                    yes: "FINE YES 💍💍",       no: "still no"       },
-  ];
-  let guiltyStep = 0;
-
-  function showGuiltyQuestion(step) {
-    const data = guiltyQuestions[Math.min(step, guiltyQuestions.length - 1)];
-
-    // Animate question swap — slide out up, slide in from below
-    overlayQ.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
-    overlayQ.style.opacity = '0';
-    overlayQ.style.transform = 'translateY(-8px)';
-
-    setTimeout(() => {
-      overlayQ.textContent = data.q;
-      overlayQ.style.transform = 'translateY(8px)';
-      setTimeout(() => {
-        overlayQ.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-        overlayQ.style.opacity = '1';
-        overlayQ.style.transform = 'translateY(0)';
-      }, 50);
-    }, 220);
-
-    // Swap button labels + grow Yes, shrink No
-    setTimeout(() => {
-      overlayYesBtn.textContent = data.yes;
-      overlayNoBtn.textContent  = data.no;
-      overlayYesBtn.style.transition = 'transform 0.3s ease';
-      overlayYesBtn.style.transform  = `scale(${1 + step * 0.06})`;
-      overlayNoBtn.style.transition  = 'transform 0.3s ease, opacity 0.3s ease';
-      overlayNoBtn.style.transform   = `scale(${Math.max(0.6, 1 - step * 0.1)})`;
-      overlayNoBtn.style.opacity     = Math.max(0.3, 1 - step * 0.14);
-    }, 250);
-  }
-
-  overlayNoBtn.addEventListener('click', () => {
-    guiltyStep++;
-    if (guiltyStep >= guiltyQuestions.length) {
-      // She's been stubborn enough — the button surrenders 😂
-      overlayNoBtn.textContent = 'okay… YES 💍';
-      overlayNoBtn.disabled = true;
-      setTimeout(() => {
-        closeOverlay();
-        setTimeout(handleYes, 400);
-      }, 700);
-      return;
-    }
-    showGuiltyQuestion(guiltyStep);
-  });
-
-  // Close overlay on background click (but not anymore — they must answer!)
-  // overlay.addEventListener('click', e => { ... }); // disabled — no escape!
-
-  // Yes close button
-  yesClose.addEventListener('click', () => {
-    yesOverlay.animate([{opacity:1},{opacity:0}], {duration:400,fill:'forwards'}).onfinish = () => {
-      yesOverlay.style.display = 'none';
-      yesOverlay.classList.remove('show');
-    };
-  });
-
-  yesOverlay.addEventListener('click', e => {
-    if (e.target === yesOverlay || e.target.classList.contains('proposal-yes-bg')) {
-      yesClose.click();
-    }
-  });
-
-
-  // Reset button
-  resetBtn.addEventListener('click', () => {
-    clearAnswer();
-    guiltyStep = 0;
+  } else {
     showAskState();
-  });
+    alreadyCelebrated = false;
+  }
+});
 
-  function handleYes() {
+/* ---- Save to Firebase ---- */
+function saveAnswer(ans) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const obj = { answer: ans, date: dateStr };
+  set(proposalRef, obj);
+  return obj;
+}
+
+function clearAnswer() {
+  remove(proposalRef);
+}
+
+/* ---- Overlay ---- */
+function openOverlay() {
+  // If Max is viewing, don't let him open the proposal overlay
+  if (isMax) return;
+
+  overlay.style.opacity = '0';
+  overlay.style.display = 'flex';
+  overlay.classList.add('open');
+  overlayRing.style.animation = 'none';
+  overlayLetter.style.opacity = '0';
+  overlayLetter.style.transform = 'translateY(20px)';
+  overlayQ.style.opacity = '0';
+  overlayQ.style.transform = 'translateY(10px)';
+  overlayBtns.style.opacity = '0';
+  overlayBtns.style.transform = 'translateY(10px)';
+  letterTyped.textContent = '';
+
+  overlay.animate([{opacity:0},{opacity:1}], {duration:500,fill:'forwards'});
+
+  setTimeout(() => {
+    overlayRing.style.animation = 'ringPop 0.9s cubic-bezier(0.34,1.56,0.64,1) forwards';
+  }, 300);
+
+  setTimeout(() => {
+    overlayLetter.style.animation = 'letterSlideIn 0.6s ease forwards';
+    setTimeout(() => typeLetterText(LETTER, () => {
+      overlayQ.style.animation = 'questionFade 0.7s ease 0.1s forwards';
+      overlayBtns.style.animation = 'btnsFade 0.7s ease 0.4s forwards';
+    }), 100);
+  }, 1000);
+}
+
+function typeLetterText(text, onDone) {
+  let i = 0;
+  const delay = 22;
+  function tick() {
+    if (i < text.length) {
+      letterTyped.textContent += text[i++];
+      setTimeout(tick, delay);
+    } else {
+      if (onDone) onDone();
+    }
+  }
+  tick();
+}
+
+function closeOverlay() {
+  overlay.animate([{opacity:1},{opacity:0}], {duration:350,fill:'forwards'}).onfinish = () => {
+    overlay.style.display = 'none';
+    overlay.classList.remove('open');
+    overlay.style.opacity = '';
+  };
+}
+
+/* ---- Yes celebration ---- */
+// isMaxPov = true  → "She said yes!"  (Max watching in real-time)
+// isMaxPov = false → "You said yes!"  (Her phone after she accepts)
+function showYesCelebration(isMaxPov = false) {
+  yesOverlay.style.display = 'flex';
+  yesOverlay.classList.add('show');
+  yesOverlay.style.opacity = '0';
+  yesRing.style.opacity = '0';
+  yesText.style.opacity = '0';
+  yesSub.style.opacity = '0';
+  yesClose.style.opacity = '0';
+
+  yesText.textContent = isMaxPov ? 'She said yes! 💍' : 'You said yes! 💍';
+  yesSub.textContent  = isMaxPov
+    ? 'She chose you. Forever. 🌹'
+    : 'Forever & always, together ✨';
+
+  yesOverlay.animate([{opacity:0},{opacity:1}], {duration:500,fill:'forwards'});
+
+  setTimeout(() => { yesRing.style.animation = 'yesRingPop 1.1s cubic-bezier(0.34,1.56,0.64,1) forwards'; }, 200);
+  setTimeout(() => { yesText.style.animation = 'yesTextPop 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards'; }, 900);
+  setTimeout(() => { yesSub.style.animation  = 'yesSubFade 0.8s ease 0.2s forwards'; }, 1200);
+  setTimeout(() => { yesClose.style.animation = 'yesCloseFade 0.6s ease forwards'; }, 1800);
+
+  for (let p = 0; p < 30; p++) {
+    setTimeout(() => spawnProposalPetal(), p * 120);
+  }
+}
+
+function spawnProposalPetal() {
+  const petals = ['🌸','💗','✨','🌹','💍','💕','🌷'];
+  const el = document.createElement('div');
+  el.textContent = petals[Math.floor(Math.random() * petals.length)];
+  el.style.cssText = `
+    position:fixed; top:-40px; font-size:${16+Math.random()*18}px;
+    left:${Math.random()*100}vw; pointer-events:none; z-index:970;
+    --drift:${(Math.random()-0.5)*200}px;
+    --spin:${(Math.random()-0.5)*720}deg;
+    animation: fall ${3+Math.random()*3}s linear forwards;
+  `;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 7000);
+}
+
+/* ---- Event listeners ---- */
+ringIcon.addEventListener('click', openOverlay);
+ringIcon.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') openOverlay(); });
+document.querySelector('.proposal-question')?.addEventListener('click', openOverlay);
+document.querySelector('.proposal-sub')?.addEventListener('click', openOverlay);
+
+overlayYesBtn.addEventListener('click', () => {
+  closeOverlay();
+  setTimeout(() => {
     const saved = saveAnswer('yes');
     showAnsweredState(saved);
-    showYesCelebration();
-  }
+    showYesCelebration(false); // her POV
+  }, 400);
+});
 
-  init();
-})();
+const guiltyQuestions = [
+  { q: "are you sure? ☹️",             yes: "yes, sure…",       no: "wait no—"     },
+  { q: "but… you love me right? 🥺",   yes: "of course i do!",  no: "i mean…"      },
+  { q: "so… is that a yes then? 💍",   yes: "okay fine YES 💍",  no: "not exactly…" },
+  { q: "not even a little yes? 🌹",    yes: "maybe a little 💗", no: "ugh fine"     },
+  { q: "okay but pretty please? 🥺",   yes: "FINE YES 💍💍",      no: "still no"     },
+];
+let guiltyStep = 0;
+
+function showGuiltyQuestion(step) {
+  const data = guiltyQuestions[Math.min(step, guiltyQuestions.length - 1)];
+  overlayQ.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+  overlayQ.style.opacity = '0';
+  overlayQ.style.transform = 'translateY(-8px)';
+  setTimeout(() => {
+    overlayQ.textContent = data.q;
+    overlayQ.style.transform = 'translateY(8px)';
+    setTimeout(() => {
+      overlayQ.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      overlayQ.style.opacity = '1';
+      overlayQ.style.transform = 'translateY(0)';
+    }, 50);
+  }, 220);
+  setTimeout(() => {
+    overlayYesBtn.textContent = data.yes;
+    overlayNoBtn.textContent  = data.no;
+    overlayYesBtn.style.transition = 'transform 0.3s ease';
+    overlayYesBtn.style.transform  = `scale(${1 + step * 0.06})`;
+    overlayNoBtn.style.transition  = 'transform 0.3s ease, opacity 0.3s ease';
+    overlayNoBtn.style.transform   = `scale(${Math.max(0.6, 1 - step * 0.1)})`;
+    overlayNoBtn.style.opacity     = Math.max(0.3, 1 - step * 0.14);
+  }, 250);
+}
+
+overlayNoBtn.addEventListener('click', () => {
+  guiltyStep++;
+  if (guiltyStep >= guiltyQuestions.length) {
+    overlayNoBtn.textContent = 'okay… YES 💍';
+    overlayNoBtn.disabled = true;
+    setTimeout(() => {
+      closeOverlay();
+      setTimeout(() => {
+        const saved = saveAnswer('yes');
+        showAnsweredState(saved);
+        showYesCelebration(false);
+      }, 400);
+    }, 700);
+    return;
+  }
+  showGuiltyQuestion(guiltyStep);
+});
+
+yesClose.addEventListener('click', () => {
+  yesOverlay.animate([{opacity:1},{opacity:0}], {duration:400,fill:'forwards'}).onfinish = () => {
+    yesOverlay.style.display = 'none';
+    yesOverlay.classList.remove('show');
+  };
+});
+
+yesOverlay.addEventListener('click', e => {
+  if (e.target === yesOverlay || e.target.classList.contains('proposal-yes-bg')) {
+    yesClose.click();
+  }
+});
+
+resetBtn.addEventListener('click', () => {
+  clearAnswer();
+  guiltyStep = 0;
+  alreadyCelebrated = false;
+});
+
 </script>
 
 <!-- HTML5 AUDIO PLAYER -->
