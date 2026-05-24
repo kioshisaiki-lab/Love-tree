@@ -4622,20 +4622,20 @@ pulseBtn.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') ope
    Max's phone → "She said yes! 💍"  (add ?view=max to the URL)
    ============================================================ */
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAdDaDLbN2Gq21SG7robfo4xi0yK_xB554",
-  authDomain: "love-tree-93466.firebaseapp.com",
-  databaseURL: "https://love-tree-93466-default-rtdb.asia-southeast1.firebasedatabase.app/",
-  projectId: "love-tree-93466",
-  storageBucket: "love-tree-93466.firebasestorage.app",
-  messagingSenderId: "689909933969",
-  appId: "1:689909933969:web:2f11d2ca51de25b0a51c30",
-  measurementId: "G-JYKYXCBYXB"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db  = firebase.database();
-const proposalRef = db.ref('proposal/answer');
+// Initialize firebase compat for Realtime Database
+if (!firebase.apps.length) {
+  firebase.initializeApp({
+    apiKey: "AIzaSyAdDaDLbN2Gq21SG7robfo4xi0yK_xB554",
+    authDomain: "love-tree-93466.firebaseapp.com",
+    databaseURL: "https://love-tree-93466-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    projectId: "love-tree-93466",
+    storageBucket: "love-tree-93466.firebasestorage.app",
+    messagingSenderId: "689909933969",
+    appId: "1:689909933969:web:2f11d2ca51de25b0a51c30"
+  });
+}
+const proposalDb  = firebase.database();
+const proposalRef = proposalDb.ref('proposal/answer');
 
 // Am I Max (proposer) or her (receiver)?
 // Her link: normal URL  →  isMax = false
