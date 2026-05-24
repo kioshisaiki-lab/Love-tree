@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Firebase SDKs (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Our Love Tree</title>
@@ -4612,16 +4615,12 @@ pulseBtn.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') ope
 })();
 </script>
 
-<!-- Firebase SDKs -->
-<script type="module">
+<script>
 /* ============================================================
    PROPOSAL FEATURE — Firebase Realtime Database sync
    Her phone  → "You said yes! 💍"
    Max's phone → "She said yes! 💍"  (add ?view=max to the URL)
    ============================================================ */
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAdDaDLbN2Gq21SG7robfo4xi0yK_xB554",
@@ -4634,9 +4633,9 @@ const firebaseConfig = {
   measurementId: "G-JYKYXCBYXB"
 };
 
-const app = initializeApp(firebaseConfig);
-const db  = getDatabase(app);
-const proposalRef = ref(db, 'proposal/answer');
+firebase.initializeApp(firebaseConfig);
+const db  = firebase.database();
+const proposalRef = db.ref('proposal/answer');
 
 // Am I Max (proposer) or her (receiver)?
 // Her link: normal URL  →  isMax = false
@@ -4697,7 +4696,7 @@ function showAnsweredState(data) {
 /* ---- Firebase: listen for changes in real-time ---- */
 let alreadyCelebrated = false;
 
-onValue(proposalRef, (snapshot) => {
+proposalRef.on('value', (snapshot) => {
   const data = snapshot.val();
   if (data && data.answer === 'yes') {
     showAnsweredState(data);
@@ -4717,12 +4716,12 @@ function saveAnswer(ans) {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const obj = { answer: ans, date: dateStr };
-  set(proposalRef, obj);
+  proposalRef.set(obj);
   return obj;
 }
 
 function clearAnswer() {
-  remove(proposalRef);
+  proposalRef.remove();
 }
 
 /* ---- Overlay ---- */
