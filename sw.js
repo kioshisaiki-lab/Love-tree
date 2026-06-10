@@ -1,14 +1,22 @@
-const CACHE = 'love-tree-v1';
+const CACHE = 'love-tree-v2';
 const ASSETS = [
   './',
   './index.html',
+  './manifest.json',
   './music.mp3',
-  './manifest.json'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE).then(cache => {
+      return Promise.all(
+        ASSETS.map(url =>
+          cache.add(url).catch(err => console.warn('Failed to cache:', url, err))
+        )
+      );
+    })
   );
   self.skipWaiting();
 });
@@ -22,8 +30,24 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// Cache-first for local assets, network-first for external (fonts, firebase)
 self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
-  );
+  const url = new URL(e.request.url);
+  const isLocal = url.origin === self.location.origin;
+
+  if (isLocal) {
+    // Cache-first: serve from cache, fall back to network
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      }))
+    );
+  } else {
+    // Network-first for external (Firebase, Google Fonts): fall back to cache
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+  }
 });
