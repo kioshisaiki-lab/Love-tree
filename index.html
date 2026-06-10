@@ -7,6 +7,22 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Our Love Tree</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#be185d" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Love Tree" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js');
+    });
+  }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Jost:wght@400;500&family=Dancing+Script:wght@600&display=swap" rel="stylesheet" />
@@ -4622,20 +4638,27 @@ pulseBtn.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') ope
    Max's phone → "She said yes! 💍"  (add ?view=max to the URL)
    ============================================================ */
 
-// Initialize firebase compat for Realtime Database
-if (!firebase.apps.length) {
-  firebase.initializeApp({
-    apiKey: "AIzaSyAdDaDLbN2Gq21SG7robfo4xi0yK_xB554",
-    authDomain: "love-tree-93466.firebaseapp.com",
-    databaseURL: "https://love-tree-93466-default-rtdb.asia-southeast1.firebasedatabase.app/",
-    projectId: "love-tree-93466",
-    storageBucket: "love-tree-93466.firebasestorage.app",
-    messagingSenderId: "689909933969",
-    appId: "1:689909933969:web:2f11d2ca51de25b0a51c30"
-  });
+// Initialize firebase compat for Realtime Database (safe — works offline too)
+let proposalRef = null;
+try {
+  if (typeof firebase !== 'undefined') {
+    if (!firebase.apps.length) {
+      firebase.initializeApp({
+        apiKey: "AIzaSyAdDaDLbN2Gq21SG7robfo4xi0yK_xB554",
+        authDomain: "love-tree-93466.firebaseapp.com",
+        databaseURL: "https://love-tree-93466-default-rtdb.asia-southeast1.firebasedatabase.app/",
+        projectId: "love-tree-93466",
+        storageBucket: "love-tree-93466.firebasestorage.app",
+        messagingSenderId: "689909933969",
+        appId: "1:689909933969:web:2f11d2ca51de25b0a51c30"
+      });
+    }
+    const proposalDb = firebase.database();
+    proposalRef = proposalDb.ref('proposal/answer');
+  }
+} catch(e) {
+  console.warn('Firebase unavailable, using local storage fallback.', e);
 }
-const proposalDb  = firebase.database();
-const proposalRef = proposalDb.ref('proposal/answer');
 
 // Am I Max (proposer) or her (receiver)?
 // Her link: normal URL  →  isMax = false
@@ -4696,32 +4719,49 @@ function showAnsweredState(data) {
 /* ---- Firebase: listen for changes in real-time ---- */
 let alreadyCelebrated = false;
 
-proposalRef.on('value', (snapshot) => {
-  const data = snapshot.val();
-  if (data && data.answer === 'yes') {
-    showAnsweredState(data);
-    // If Max's phone is open and she just said yes — show HIS celebration
-    if (isMax && !alreadyCelebrated) {
-      alreadyCelebrated = true;
-      showYesCelebration(true); // true = max's POV
+if (proposalRef) {
+  proposalRef.on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data && data.answer === 'yes') {
+      showAnsweredState(data);
+      if (isMax && !alreadyCelebrated) {
+        alreadyCelebrated = true;
+        showYesCelebration(true);
+      }
+    } else {
+      showAskState();
+      alreadyCelebrated = false;
     }
+  });
+} else {
+  // Offline fallback: use localStorage
+  const local = localStorage.getItem('proposalAnswer');
+  if (local) {
+    try { showAnsweredState(JSON.parse(local)); } catch(e) { showAskState(); }
   } else {
     showAskState();
-    alreadyCelebrated = false;
   }
-});
+}
 
 /* ---- Save to Firebase ---- */
 function saveAnswer(ans) {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const obj = { answer: ans, date: dateStr };
-  proposalRef.set(obj);
+  if (proposalRef) {
+    proposalRef.set(obj);
+  } else {
+    localStorage.setItem('proposalAnswer', JSON.stringify(obj));
+  }
   return obj;
 }
 
 function clearAnswer() {
-  proposalRef.remove();
+  if (proposalRef) {
+    proposalRef.remove();
+  } else {
+    localStorage.removeItem('proposalAnswer');
+  }
 }
 
 /* ---- Overlay ---- */
