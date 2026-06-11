@@ -5030,20 +5030,20 @@ resetBtn.addEventListener('click', () => {
   </div>
 
   <!-- Download music row -->
-  <a id="dl-music-btn" href="music.mp3" download="our-song.mp3" style="
+  <button id="dl-music-btn" style="
     display:flex;align-items:center;justify-content:center;gap:8px;
     width:100%;padding:9px 0;
     border-radius:14px;
     background:linear-gradient(135deg,#be185d,#a855f7);
     color:white;
     font-family:'Jost',sans-serif;font-size:0.82rem;font-weight:500;
-    text-decoration:none;
+    border:none;cursor:pointer;
     box-shadow:0 3px 12px rgba(168,85,247,0.3);
     transition:opacity 0.2s;
     -webkit-tap-highlight-color:transparent;
-  " onmouseenter="this.style.opacity='0.85'" onmouseleave="this.style.opacity='1'">
+  ">
     ⬇️ Download Our Song
-  </a>
+  </button>
 </div>
 
 <style>
@@ -5130,14 +5130,104 @@ resetBtn.addEventListener('click', () => {
     if (this.value == 0 && musicOn) setMusicOn(false);
   });
 
-  /* ---- Auto-play on first interaction ---- */
-  function autoPlay() {
-    if (!played) { setMusicOn(true); }
+  /* ---- Auto-play on first tap anywhere (not toggle) ---- */
+  function autoPlay(e) {
+    // Don't double-trigger if user tapped the toggle itself
+    if (e.target === musicToggle || musicToggle.contains(e.target)) return;
+    if (!played) {
+      audio.volume = volSlider.value / 100;
+      audio.play().then(function() {
+        played = true;
+        musicOn = true;
+        musicToggle.style.background = 'linear-gradient(135deg,#be185d,#a855f7)';
+        musicKnob.style.left = '20px';
+        settingsBtn.textContent = '🎶';
+        settingsBtn.style.animation = 'none';
+      }).catch(function() {});
+    }
     document.removeEventListener('touchend', autoPlay);
     document.removeEventListener('click', autoPlay);
   }
   document.addEventListener('touchend', autoPlay);
   document.addEventListener('click', autoPlay);
+
+  /* ---- Make sure toggle always works even before autoplay ---- */
+  musicToggle.addEventListener('touchend', function(e) {
+    e.stopPropagation();
+    setMusicOn(!musicOn);
+  });
+
+  /* ---- Sync toggle when intro screen starts music ---- */
+  audio.addEventListener('play', function() {
+    if (!musicOn) {
+      musicOn = true;
+      played = true;
+      musicToggle.style.background = 'linear-gradient(135deg,#be185d,#a855f7)';
+      musicKnob.style.left = '20px';
+      settingsBtn.textContent = '🎶';
+      settingsBtn.style.animation = 'none';
+    }
+  });
+
+  /* ---- Download Our Song (offline cache) ---- */
+  const dlBtn = document.getElementById('dl-music-btn');
+
+  function showToast(msg, color) {
+    let toast = document.getElementById('dl-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'dl-toast';
+      toast.style.position = 'fixed';
+      toast.style.bottom = '6.5rem';
+      toast.style.left = '50%';
+      toast.style.transform = 'translateX(-50%) translateY(20px)';
+      toast.style.zIndex = '999999';
+      toast.style.padding = '12px 22px';
+      toast.style.borderRadius = '20px';
+      toast.style.fontFamily = "'Jost', sans-serif";
+      toast.style.fontSize = '0.85rem';
+      toast.style.fontWeight = '500';
+      toast.style.color = 'white';
+      toast.style.textAlign = 'center';
+      toast.style.whiteSpace = 'nowrap';
+      toast.style.boxShadow = '0 4px 20px rgba(0,0,0,0.18)';
+      toast.style.opacity = '0';
+      toast.style.transition = 'all 0.35s cubic-bezier(0.34,1.56,0.64,1)';
+      toast.style.pointerEvents = 'none';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.background = color;
+    // animate in
+    requestAnimationFrame(() => {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    // animate out after 3s
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(20px)';
+    }, 3000);
+  }
+
+  dlBtn.addEventListener('click', async function(e) {
+    e.stopPropagation();
+    dlBtn.textContent = '⏳ Saving…';
+    dlBtn.disabled = true;
+    try {
+      const cache = await caches.open('love-tree-v6');
+      const res = await fetch('music.mp3');
+      if (!res.ok) throw new Error('fetch failed');
+      await cache.put('music.mp3', res);
+      dlBtn.textContent = '✅ Saved Offline!';
+      showToast('🎵 Music saved! Plays offline now 💕', 'linear-gradient(135deg,#be185d,#a855f7)');
+    } catch(err) {
+      dlBtn.textContent = '⬇️ Download Our Song';
+      dlBtn.disabled = false;
+      showToast('❌ Download failed. Check connection.', '#be185d');
+    }
+  });
+  dlBtn.addEventListener('touchend', function(e) { e.stopPropagation(); });
 })();
 </script>
 </body>
