@@ -2781,25 +2781,43 @@
     input.addEventListener('change',function(){
       if(!input.files.length) return;
       pendingFiles=Array.from(input.files);
-      pendingIndex=0; pendingWho=null;
+      pendingIndex=0;
+      pendingWho=null; // reset so selectWho guard works fresh
       input.value='';
       polWhoEunice.style.background='transparent'; polWhoEunice.style.color='var(--burgundy-mid)';
       polWhoMax.style.background='transparent'; polWhoMax.style.color='var(--purple)';
-      polWhoWrap.style.display='block';
+      // Delay showing to avoid any leftover touch events from file picker
+      setTimeout(function(){ polWhoWrap.style.display='block'; }, 50);
     });
 
     function selectWho(who){
+      if(pendingWho !== null) return; // prevent double trigger
       pendingWho=who;
       polWhoEunice.style.background=who==='eunice'?'var(--pink)':'transparent';
       polWhoEunice.style.color=who==='eunice'?'#fff':'var(--burgundy-mid)';
       polWhoMax.style.background=who==='max'?'var(--purple)':'transparent';
       polWhoMax.style.color=who==='max'?'#fff':'var(--purple)';
-      setTimeout(function(){ polWhoWrap.style.display='none'; processNextPending(); },300);
+      polWhoWrap.style.display='none'; // hide immediately
+      setTimeout(function(){ processNextPending(); },100);
     }
 
-    polWhoEunice.addEventListener('click',function(){ selectWho('eunice'); });
-    polWhoMax.addEventListener('click',function(){ selectWho('max'); });
-    polWhoCancel.addEventListener('click',function(){ pendingFiles=[];polWhoWrap.style.display='none'; });
+    function bindWhoBtn(el, who) {
+      // Use both click and touchend, prevent bubbling to avoid re-triggering file input
+      ['click','touchend'].forEach(function(evt) {
+        el.addEventListener(evt, function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (who === null) {
+            pendingFiles = []; polWhoWrap.style.display = 'none';
+          } else {
+            selectWho(who);
+          }
+        }, { passive: false });
+      });
+    }
+    bindWhoBtn(polWhoEunice, 'eunice');
+    bindWhoBtn(polWhoMax, 'max');
+    bindWhoBtn(polWhoCancel, null);
 
     // Step 2: caption per photo
     function processNextPending(){
@@ -3488,7 +3506,9 @@ const firebaseConfig = {
   appId: "1:689909933969:web:2f11d2ca51de25b0a51c30"
 };
 
-const app = initializeApp(firebaseConfig);
+import { getApp as _getApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+let app;
+try { app = _getApp(); } catch(_) { app = initializeApp(firebaseConfig); }
 const db  = getFirestore(app);
 const wishesCol = collection(db, 'wishes');
 
@@ -4639,9 +4659,12 @@ pulseBtn.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') ope
    ============================================================ */
 
 // Initialize firebase compat for Realtime Database (safe — works offline too)
+// Note: ES module already called initializeApp() above, so we reuse that app here
 let proposalRef = null;
 try {
   if (typeof firebase !== 'undefined') {
+    // Use existing app if already initialized by the ES module block above
+    // firebase.apps is the compat array; if empty, init; if not, reuse
     if (!firebase.apps.length) {
       firebase.initializeApp({
         apiKey: "AIzaSyAdDaDLbN2Gq21SG7robfo4xi0yK_xB554",
@@ -4652,6 +4675,14 @@ try {
         messagingSenderId: "689909933969",
         appId: "1:689909933969:web:2f11d2ca51de25b0a51c30"
       });
+    } else {
+      // patch databaseURL into the existing app if missing
+      try {
+        const existingApp = firebase.app();
+        if (!existingApp.options.databaseURL) {
+          existingApp.options.databaseURL = "https://love-tree-93466-default-rtdb.asia-southeast1.firebasedatabase.app/";
+        }
+      } catch(_){}
     }
     const proposalDb = firebase.database();
     proposalRef = proposalDb.ref('proposal/answer');
@@ -5215,7 +5246,7 @@ resetBtn.addEventListener('click', () => {
     dlBtn.textContent = '⏳ Saving…';
     dlBtn.disabled = true;
     try {
-      const cache = await caches.open('love-tree-v6');
+      const cache = await caches.open('love-tree-v8');
       const res = await fetch('music.mp3');
       if (!res.ok) throw new Error('fetch failed');
       await cache.put('music.mp3', res);
