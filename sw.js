@@ -1,4 +1,4 @@
-const CACHE = 'love-tree-v8';
+const CACHE = 'love-tree-v10';
 const ASSETS = [
   './',
   './index.html',
